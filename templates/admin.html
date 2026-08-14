@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — CareerBoost AI{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-lg-2 d-none d-lg-block">
+      <div class="sidebar-cb">
+        <ul class="nav flex-column">
+          <li class="nav-item"><a class="nav-link active" href="{{ url_for('admin.dashboard') }}"><i class="bi bi-speedometer2 me-2"></i>Overview</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.users') }}"><i class="bi bi-people me-2"></i>Users</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('main.home') }}"><i class="bi bi-house me-2"></i>Back to Site</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div class="col-lg-10">
+      <div class="mb-4 animate-fade-up">
+        <h3 class="fw-bold">Admin Dashboard</h3>
+        <p class="text-muted-custom mb-0">Platform-wide overview and management.</p>
+      </div>
+
+      <div class="row g-4 mb-4">
+        <div class="col-md-3 col-6">
+          <div class="stat-card animate-fade-up delay-1">
+            <div class="stat-icon mb-2"><i class="bi bi-people"></i></div>
+            <h4 class="fw-bold mb-0">{{ stats.total_users }}</h4>
+            <span class="text-muted-custom small">Total Students</span>
+          </div>
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="stat-card animate-fade-up delay-2">
+            <div class="stat-icon mb-2"><i class="bi bi-file-earmark-person"></i></div>
+            <h4 class="fw-bold mb-0">{{ stats.total_resumes }}</h4>
+            <span class="text-muted-custom small">Resumes Created</span>
+          </div>
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="stat-card animate-fade-up delay-3">
+            <div class="stat-icon mb-2"><i class="bi bi-patch-check"></i></div>
+            <h4 class="fw-bold mb-0">{{ stats.total_quiz_attempts }}</h4>
+            <span class="text-muted-custom small">Quiz Attempts</span>
+          </div>
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="stat-card animate-fade-up delay-4">
+            <div class="stat-icon mb-2"><i class="bi bi-envelope"></i></div>
+            <h4 class="fw-bold mb-0">{{ stats.unread_messages }}</h4>
+            <span class="text-muted-custom small">Unread Messages</span>
+          </div>
+        </div>
+      </div>
+
+      <h6 class="fw-bold mb-3 mt-2"><i class="bi bi-robot"></i> AI Feature Usage</h6>
+      <div class="row g-4 mb-4">
+        <div class="col-md-3 col-6">
+          <div class="stat-card animate-fade-up delay-1">
+            <div class="stat-icon mb-2"><i class="bi bi-chat-dots"></i></div>
+            <h4 class="fw-bold mb-0">{{ stats.total_ai_requests }}</h4>
+            <span class="text-muted-custom small">Total AI Requests</span>
+          </div>
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="stat-card animate-fade-up delay-2">
+            <div class="stat-icon mb-2"><i class="bi bi-people-fill"></i></div>
+            <h4 class="fw-bold mb-0">{{ stats.total_gd_attempts }}</h4>
+            <span class="text-muted-custom small">GD Attempts</span>
+          </div>
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="stat-card animate-fade-up delay-3">
+            <div class="stat-icon mb-2"><i class="bi bi-graph-up-arrow"></i></div>
+            <h4 class="fw-bold mb-0">{{ stats.avg_gd_score }}</h4>
+            <span class="text-muted-custom small">Avg GD Score</span>
+          </div>
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="stat-card animate-fade-up delay-4">
+            <div class="stat-icon mb-2"><i class="bi bi-patch-question"></i></div>
+            <h4 class="fw-bold mb-0">{{ stats.total_ai_quiz_attempts }}</h4>
+            <span class="text-muted-custom small">AI Quiz Attempts</span>
+          </div>
+        </div>
+      </div>
+      <div class="row g-4 mb-4">
+        <div class="col-md-4">
+          <div class="stat-card animate-fade-up delay-1">
+            <div class="stat-icon mb-2"><i class="bi bi-signpost-split"></i></div>
+            <h4 class="fw-bold mb-0">{{ stats.total_roadmaps }}</h4>
+            <span class="text-muted-custom small">Career Roadmaps Generated</span>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="stat-card animate-fade-up delay-2">
+            <div class="stat-icon mb-2"><i class="bi bi-mortarboard"></i></div>
+            <h4 class="fw-bold mb-0">{{ stats.avg_quiz_score }}%</h4>
+            <span class="text-muted-custom small">Avg Aptitude Quiz Score</span>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="stat-card animate-fade-up delay-3">
+            <div class="stat-icon mb-2"><i class="bi bi-fire"></i></div>
+            <h4 class="fw-bold mb-0 small-topic-title">{{ stats.most_practiced_gd_topic }}</h4>
+            <span class="text-muted-custom small">Most Practiced GD Topic</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+          <div class="card-cb p-4 animate-fade-up">
+            <h6 class="fw-bold mb-3">Signups (last entries)</h6>
+            <canvas id="signupChart" height="200"></canvas>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="card-cb p-4 animate-fade-up delay-1">
+            <h6 class="fw-bold mb-3">Quiz Attempts by Category</h6>
+            <canvas id="quizCategoryChart" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <div class="card-cb p-4 animate-fade-up delay-2">
+            <h6 class="fw-bold mb-3">Recent Students</h6>
+            <div class="table-responsive">
+              <table class="table table-cb align-middle mb-0">
+                <thead><tr><th>Name</th><th>Email</th><th>Joined</th></tr></thead>
+                <tbody>
+                  {% for u in recent_users %}
+                  <tr><td>{{ u.full_name }}</td><td>{{ u.email }}</td><td>{{ u.created_at[:10] }}</td></tr>
+                  {% else %}
+                  <tr><td colspan="3" class="text-muted-custom">No students yet.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="card-cb p-4 animate-fade-up delay-3">
+            <h6 class="fw-bold mb-3">Recent Contact Messages</h6>
+            {% for m in messages %}
+            <div class="d-flex justify-content-between align-items-start border-bottom py-2" style="border-color: var(--border) !important;">
+              <div>
+                <strong>{{ m.name }}</strong> <span class="text-muted-custom small">— {{ m.subject or 'No subject' }}</span>
+                <p class="small text-muted-custom mb-0">{{ m.message[:80] }}{% if m.message|length > 80 %}...{% endif %}</p>
+              </div>
+              {% if not m.is_read %}
+              <a href="{{ url_for('admin.mark_read', msg_id=m.id) }}" class="btn btn-sm btn-outline-cb">Mark Read</a>
+              {% else %}
+              <span class="badge badge-easy">Read</span>
+              {% endif %}
+            </div>
+            {% else %}
+            <p class="text-muted-custom mb-0">No messages yet.</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  fetch("{{ url_for('admin.chart_data') }}")
+    .then(res => res.json())
+    .then(data => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const gridColor = isDark ? '#2A2F3E' : '#E5E7EB';
+      const textColor = isDark ? '#9CA3AF' : '#6B7280';
+
+      new Chart(document.getElementById('signupChart'), {
+        type: 'line',
+        data: {
+          labels: data.signup_labels.length ? data.signup_labels : ['No data'],
+          datasets: [{
+            label: 'New Signups',
+            data: data.signup_counts.length ? data.signup_counts : [0],
+            borderColor: '#F97316',
+            backgroundColor: 'rgba(249,115,22,0.15)',
+            fill: true, tension: 0.35,
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } }, x: { grid: { display: false }, ticks: { color: textColor } } } }
+      });
+
+      new Chart(document.getElementById('quizCategoryChart'), {
+        type: 'doughnut',
+        data: {
+          labels: data.quiz_categories.length ? data.quiz_categories : ['No data'],
+          datasets: [{
+            data: data.quiz_counts.length ? data.quiz_counts : [1],
+            backgroundColor: ['#0D9488', '#F97316', '#16A34A', '#D97706'],
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: textColor } } } }
+      });
+    });
+</script>
+{% endblock %}

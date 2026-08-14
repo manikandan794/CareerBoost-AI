@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block title %}Resume Builder — CareerBoost AI{% endblock %}
+{% block content %}
+<div class="container-fluid py-4 px-4">
+  <div class="mb-4 animate-fade-up">
+    <h3 class="fw-bold">Professional Resume Builder</h3>
+    <p class="text-muted-custom">A guided, step-by-step builder with a live preview and four ATS-friendly templates.</p>
+  </div>
+
+  <div class="resume-steps animate-fade-up delay-1" id="resumeSteps">
+    <div class="resume-step-pill active" data-step="1"><span class="step-num">1</span> Basics</div>
+    <div class="resume-step-pill" data-step="2"><span class="step-num">2</span> Summary &amp; Skills</div>
+    <div class="resume-step-pill" data-step="3"><span class="step-num">3</span> Education</div>
+    <div class="resume-step-pill" data-step="4"><span class="step-num">4</span> Experience</div>
+    <div class="resume-step-pill" data-step="5"><span class="step-num">5</span> Projects</div>
+    <div class="resume-step-pill" data-step="6"><span class="step-num">6</span> Extras</div>
+    <div class="resume-step-pill" data-step="7"><span class="step-num">7</span> Template &amp; Review</div>
+  </div>
+
+  <form method="POST" action="{{ url_for('resume.builder') }}" id="resumeForm" class="animate-fade-up delay-1">
+    <div class="row g-4">
+      <!-- LEFT: step panels -->
+      <div class="col-lg-7">
+
+        <!-- STEP 1: Basics -->
+        <div class="resume-step-panel active" data-panel="1">
+          <div class="card-cb p-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-person-badge text-primary-custom"></i> Basic Details</h5>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Full Name *</label>
+                <input type="text" name="full_name" class="form-control form-control-cb rp-field" data-preview="full_name" value="{{ session.get('full_name','') }}" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Email *</label>
+                <input type="email" name="email" class="form-control form-control-cb rp-field" data-preview="email" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Phone</label>
+                <input type="text" name="phone" class="form-control form-control-cb rp-field" data-preview="phone">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Address / Location</label>
+                <input type="text" name="address" class="form-control form-control-cb rp-field" data-preview="address">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">LinkedIn</label>
+                <input type="text" name="linkedin" class="form-control form-control-cb rp-field" data-preview="linkedin" placeholder="linkedin.com/in/you">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">GitHub</label>
+                <input type="text" name="github" class="form-control form-control-cb rp-field" data-preview="github" placeholder="github.com/you">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Portfolio</label>
+                <input type="text" name="portfolio" class="form-control form-control-cb rp-field" data-preview="portfolio" placeholder="yourname.dev">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2: Summary & Skills -->
+        <div class="resume-step-panel" data-panel="2">
+          <div class="card-cb p-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-stars text-primary-custom"></i> Professional Summary &amp; Skills</h5>
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label">Professional Summary</label>
+                <textarea name="summary" rows="3" class="form-control form-control-cb rp-field" data-preview="summary" placeholder="A short 2-3 line summary: who you are, your strongest skill, one measurable achievement."></textarea>
+                <div class="form-text">Tip: ask the AI Assistant (bottom-right) "help me write my summary" for a template.</div>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Skills (comma separated)</label>
+                <input type="text" name="skills" class="form-control form-control-cb rp-field" data-preview="skills" placeholder="Python, SQL, Git, REST APIs, Communication">
+              </div>
+              <div class="col-12">
+                <label class="form-label">Languages Known</label>
+                <input type="text" name="languages" class="form-control form-control-cb rp-field" data-preview="languages" placeholder="English (Fluent), Tamil (Native), Hindi (Conversational)">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 3: Education -->
+        <div class="resume-step-panel" data-panel="3">
+          <div class="card-cb p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="fw-bold mb-0"><i class="bi bi-mortarboard text-primary-custom"></i> Education</h5>
+              <button type="button" class="btn btn-outline-cb btn-sm" data-add-block="edu"><i class="bi bi-plus-lg"></i> Add</button>
+            </div>
+            <div id="edu-container">
+              <div class="repeatable-block">
+                <button type="button" class="btn-close remove-block-btn position-absolute top-0 end-0 m-2"></button>
+                <div class="row g-3">
+                  <div class="col-md-6"><label class="form-label">Degree</label><input type="text" name="edu_degree" class="form-control form-control-cb rp-repeat-field" data-preview-group="education" placeholder="B.E. Computer Science"></div>
+                  <div class="col-md-6"><label class="form-label">Institution</label><input type="text" name="edu_institution" class="form-control form-control-cb rp-repeat-field" data-preview-group="education"></div>
+                  <div class="col-md-6"><label class="form-label">Year</label><input type="text" name="edu_year" class="form-control form-control-cb rp-repeat-field" data-preview-group="education" placeholder="2024 - 2028"></div>
+                  <div class="col-md-6"><label class="form-label">Score / CGPA</label><input type="text" name="edu_score" class="form-control form-control-cb rp-repeat-field" data-preview-group="education"></div>
+                </div>
+              </div>
+            </div>
+            <template id="edu-template">
+              <div class="repeatable-block">
+                <button type="button" class="btn-close remove-block-btn position-absolute top-0 end-0 m-2"></button>
+                <div class="row g-3">
+                  <div class="col-md-6"><label class="form-label">Degree</label><input type="text" name="edu_degree" class="form-control form-control-cb rp-repeat-field" data-preview-group="education"></div>
+                  <div class="col-md-6"><label class="form-label">Institution</label><input type="text" name="edu_institution" class="form-control form-control-cb rp-repeat-field" data-preview-group="education"></div>
+                  <div class="col-md-6"><label class="form-label">Year</label><input type="text" name="edu_year" class="form-control form-control-cb rp-repeat-field" data-preview-group="education"></div>
+                  <div class="col-md-6"><label class="form-label">Score / CGPA</label><input type="text" name="edu_score" class="form-control form-control-cb rp-repeat-field" data-preview-group="education"></div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- STEP 4: Experience -->
+        <div class="resume-step-panel" data-panel="4">
+          <div class="card-cb p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="fw-bold mb-0"><i class="bi bi-briefcase text-primary-custom"></i> Experience / Internships</h5>
+              <button type="button" class="btn btn-outline-cb btn-sm" data-add-block="exp"><i class="bi bi-plus-lg"></i> Add</button>
+            </div>
+            <div id="exp-container"></div>
+            <template id="exp-template">
+              <div class="repeatable-block">
+                <button type="button" class="btn-close remove-block-btn position-absolute top-0 end-0 m-2"></button>
+                <div class="row g-3">
+                  <div class="col-md-6"><label class="form-label">Role</label><input type="text" name="exp_role" class="form-control form-control-cb rp-repeat-field" data-preview-group="experience"></div>
+                  <div class="col-md-6"><label class="form-label">Company</label><input type="text" name="exp_company" class="form-control form-control-cb rp-repeat-field" data-preview-group="experience"></div>
+                  <div class="col-md-6"><label class="form-label">Duration</label><input type="text" name="exp_duration" class="form-control form-control-cb rp-repeat-field" data-preview-group="experience" placeholder="Jun 2025 - Aug 2025"></div>
+                  <div class="col-12"><label class="form-label">Description (use action verbs + numbers)</label><textarea name="exp_description" rows="2" class="form-control form-control-cb rp-repeat-field" data-preview-group="experience" placeholder="Built X using Y, resulting in Z% improvement / N users."></textarea></div>
+                </div>
+              </div>
+            </template>
+            <p class="text-muted-custom small mb-0">No experience yet? Skip this step — it's optional.</p>
+          </div>
+        </div>
+
+        <!-- STEP 5: Projects -->
+        <div class="resume-step-panel" data-panel="5">
+          <div class="card-cb p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="fw-bold mb-0"><i class="bi bi-kanban text-primary-custom"></i> Projects</h5>
+              <button type="button" class="btn btn-outline-cb btn-sm" data-add-block="proj"><i class="bi bi-plus-lg"></i> Add</button>
+            </div>
+            <div id="proj-container">
+              <div class="repeatable-block">
+                <button type="button" class="btn-close remove-block-btn position-absolute top-0 end-0 m-2"></button>
+                <div class="row g-3">
+                  <div class="col-12"><label class="form-label">Project Title</label><input type="text" name="proj_title" class="form-control form-control-cb rp-repeat-field" data-preview-group="projects"></div>
+                  <div class="col-12"><label class="form-label">Description</label><textarea name="proj_description" rows="2" class="form-control form-control-cb rp-repeat-field" data-preview-group="projects" placeholder="What you built, the stack used, and the measurable outcome."></textarea></div>
+                </div>
+              </div>
+            </div>
+            <template id="proj-template">
+              <div class="repeatable-block">
+                <button type="button" class="btn-close remove-block-btn position-absolute top-0 end-0 m-2"></button>
+                <div class="row g-3">
+                  <div class="col-12"><label class="form-label">Project Title</label><input type="text" name="proj_title" class="form-control form-control-cb rp-repeat-field" data-preview-group="projects"></div>
+                  <div class="col-12"><label class="form-label">Description</label><textarea name="proj_description" rows="2" class="form-control form-control-cb rp-repeat-field" data-preview-group="projects"></textarea></div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- STEP 6: Extras -->
+        <div class="resume-step-panel" data-panel="6">
+          <div class="card-cb p-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-award text-primary-custom"></i> Certifications &amp; Achievements</h5>
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label">Certifications</label>
+                <textarea name="certifications" rows="2" class="form-control form-control-cb rp-field" data-preview="certifications" placeholder="List any certifications, one per line or comma separated."></textarea>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Achievements / Awards</label>
+                <textarea name="achievements" rows="2" class="form-control form-control-cb rp-field" data-preview="achievements" placeholder="Hackathon wins, scholarships, competitive programming ranks, publications…"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 7: Template & Review -->
+        <div class="resume-step-panel" data-panel="7">
+          <div class="card-cb p-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-palette text-primary-custom"></i> Choose a Template</h5>
+            <div class="row g-3">
+              <div class="col-6 col-md-3">
+                <div class="resume-template-option selected" data-template="classic">
+                  <div class="resume-template-swatch swatch-classic"></div>
+                  <div class="fw-semibold small">Classic</div>
+                  <div class="text-muted-custom" style="font-size:0.72rem;">Safest for ATS</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <div class="resume-template-option" data-template="modern">
+                  <div class="resume-template-swatch swatch-modern"></div>
+                  <div class="fw-semibold small">Modern</div>
+                  <div class="text-muted-custom" style="font-size:0.72rem;">Product / startup</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <div class="resume-template-option" data-template="minimal">
+                  <div class="resume-template-swatch swatch-minimal"></div>
+                  <div class="fw-semibold small">Minimal</div>
+                  <div class="text-muted-custom" style="font-size:0.72rem;">Ultra-conservative</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <div class="resume-template-option" data-template="executive">
+                  <div class="resume-template-swatch swatch-executive"></div>
+                  <div class="fw-semibold small">Executive</div>
+                  <div class="text-muted-custom" style="font-size:0.72rem;">Senior / consulting</div>
+                </div>
+              </div>
+            </div>
+            <input type="hidden" name="template" id="templateInput" value="classic">
+            <p class="text-muted-custom small mt-3 mb-0">Review the live preview on the right, then generate your PDF. You'll see a quick ATS score before downloading.</p>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between mt-3">
+          <button type="button" class="btn btn-outline-cb" id="resumePrevBtn" style="visibility:hidden;"><i class="bi bi-arrow-left"></i> Back</button>
+          <button type="button" class="btn btn-primary-cb" id="resumeNextBtn">Next <i class="bi bi-arrow-right"></i></button>
+          <button type="submit" class="btn btn-primary-cb px-4" id="resumeSubmitBtn" style="display:none;">
+            <i class="bi bi-file-earmark-pdf me-1"></i> Generate &amp; Download PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- RIGHT: live preview -->
+      <div class="col-lg-5">
+        <div class="position-sticky" style="top: 90px;">
+          <p class="small fw-semibold text-muted-custom mb-2"><i class="bi bi-eye"></i> Live Preview</p>
+          <div class="resume-live-preview" id="resumeLivePreview">
+            <div class="rlp-name" data-out="full_name">Your Name</div>
+            <div class="rlp-contact" data-out="contact">email • phone • location</div>
+            <div class="rlp-contact" data-out="links"></div>
+            <div data-section="summary" style="display:none;"><h6>PROFESSIONAL SUMMARY</h6><div data-out="summary"></div></div>
+            <div data-section="skills" style="display:none;"><h6>SKILLS</h6><div data-out="skills"></div></div>
+            <div data-section="education" style="display:none;"><h6>EDUCATION</h6><div data-out="education"></div></div>
+            <div data-section="experience" style="display:none;"><h6>EXPERIENCE</h6><div data-out="experience"></div></div>
+            <div data-section="projects" style="display:none;"><h6>PROJECTS</h6><div data-out="projects"></div></div>
+            <div data-section="certifications" style="display:none;"><h6>CERTIFICATIONS</h6><div data-out="certifications"></div></div>
+            <div data-section="achievements" style="display:none;"><h6>ACHIEVEMENTS</h6><div data-out="achievements"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/resume_builder.js') }}"></script>
+{% endblock %}

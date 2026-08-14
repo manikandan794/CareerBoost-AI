@@ -1,0 +1,32 @@
+# Environment / secrets
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+venv/
+.venv/
+env/
+*.egg-info/
+
+# Database (created automatically on first run - see models/db.py)
+database/*.db
+database/*.sqlite
+database/*.sqlite3
+*.sqlite
+*.sqlite3
+
+# Generated / uploaded files (created automatically - see config.py)
+static/generated/*
+!static/generated/.gitkeep
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log

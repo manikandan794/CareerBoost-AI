@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}GD Session — {{ gd_session.topic_title }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3 animate-fade-up">
+    <div>
+      <span class="badge badge-{{ 'easy' if gd_session.difficulty == 'Easy' else 'medium' if gd_session.difficulty == 'Medium' else 'hard' }} mb-2">{{ gd_session.difficulty }}</span>
+      <h4 class="fw-bold mb-0">{{ gd_session.topic_title }}</h4>
+      <p class="text-muted-custom small mb-0">{{ gd_session.participant_count }} AI participants · <span id="timerDisplay">{{ gd_session.time_limit_minutes }}:00</span> remaining</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-cb btn-sm" id="tipBtn"><i class="bi bi-lightbulb"></i> Coaching Tip</button>
+      <button class="btn btn-primary-cb btn-sm" id="endBtn"><i class="bi bi-flag"></i> End &amp; Evaluate</button>
+    </div>
+  </div>
+
+  <div id="tipBanner" class="alert alert-info small py-2 d-none animate-fade-up"></div>
+
+  <div class="card-cb p-0 animate-fade-up gd-chat-card">
+    <div id="gdMessages" class="gd-chat-messages">
+      {% for m in messages %}
+        <div class="gd-msg {{ 'gd-msg-you' if m.speaker == 'You' else 'gd-msg-ai' }}">
+          <div class="gd-msg-speaker">{{ m.speaker }}</div>
+          <div class="gd-msg-bubble">{{ m.message }}</div>
+        </div>
+      {% endfor %}
+      {% if not messages %}
+        <div class="text-center text-muted-custom py-5" id="emptyState">
+          <i class="bi bi-chat-square-dots fs-1 d-block mb-2"></i>
+          Say something to kick off the discussion — the AI participants will jump in.
+        </div>
+      {% endif %}
+    </div>
+    <form id="gdForm" class="gd-chat-input">
+      <input type="text" id="gdInput" placeholder="Share your point on the topic…" autocomplete="off">
+      <button type="submit" aria-label="Send"><i class="bi bi-send-fill"></i></button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+.gd-chat-card { display: flex; flex-direction: column; height: 62vh; overflow: hidden; }
+.gd-chat-messages { flex: 1; overflow-y: auto; padding: 1.25rem; background: var(--bg); display: flex; flex-direction: column; gap: 0.9rem; }
+.gd-msg { max-width: 78%; }
+.gd-msg-you { align-self: flex-end; text-align: right; }
+.gd-msg-ai { align-self: flex-start; }
+.gd-msg-speaker { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); margin-bottom: 2px; }
+.gd-msg-you .gd-msg-speaker { color: var(--primary); }
+.gd-msg-bubble { display: inline-block; padding: 0.6rem 0.9rem; border-radius: 14px; font-size: 0.88rem; line-height: 1.45; text-align: left; }
+.gd-msg-you .gd-msg-bubble { background: var(--primary); color: #fff; border-bottom-right-radius: 4px; }
+.gd-msg-ai .gd-msg-bubble { background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.gd-chat-input { display: flex; gap: 0.6rem; padding: 0.85rem; border-top: 1px solid var(--border); background: var(--surface); }
+.gd-chat-input input { flex: 1; border: 1px solid var(--border); border-radius: 999px; padding: 0.6rem 1.1rem; background: var(--bg); color: var(--text); }
+.gd-chat-input input:focus { outline: none; border-color: var(--primary); }
+.gd-chat-input button { width: 42px; height: 42px; border-radius: 50%; border: none; background: var(--primary); color: #fff; flex-shrink: 0; }
+.gd-typing { font-size: 0.8rem; color: var(--text-muted); font-style: italic; }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const SESSION_ID = {{ gd_session.id }};
+  const messagesBox = document.getElementById('gdMessages');
+  const form = document.getElementById('gdForm');
+  const input = document.getElementById('gdInput');
+  const endBtn = document.getElementById('endBtn');
+  const tipBtn = document.getElementById('tipBtn');
+  const tipBanner = document.getElementById('tipBanner');
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+  function scrollDown() { messagesBox.scrollTop = messagesBox.scrollHeight; }
+
+  function addMessage(speaker, message) {
+    const empty = document.getElementById('emptyState');
+    if (empty) empty.remove();
+    const wrap = document.createElement('div');
+    wrap.className = 'gd-msg ' + (speaker === 'You' ? 'gd-msg-you' : 'gd-msg-ai');
+    wrap.innerHTML = `<div class="gd-msg-speaker">${esc(speaker)}</div><div class="gd-msg-bubble">${esc(message)}</div>`;
+    messagesBox.appendChild(wrap);
+    scrollDown();
+  }
+
+  function addTyping() {
+    const el = document.createElement('div');
+    el.className = 'gd-typing'; el.id = 'gdTyping';
+    el.textContent = 'The group is responding…';
+    messagesBox.appendChild(el);
+    scrollDown();
+  }
+  function removeTyping() { const el = document.getElementById('gdTyping'); if (el) el.remove(); }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    addMessage('You', text);
+    addTyping();
+
+    fetch(`/api/gd/${SESSION_ID}/message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        removeTyping();
+        if (!data.ok) { addMessage('System', data.error); return; }
+        data.turns.forEach(t => addMessage(t.speaker, t.message));
+      })
+      .catch(() => { removeTyping(); addMessage('System', 'Something went wrong reaching the AI participants.'); });
+  });
+
+  tipBtn.addEventListener('click', function () {
+    tipBtn.disabled = true;
+    fetch(`/api/gd/${SESSION_ID}/tip`, { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        tipBanner.classList.remove('d-none');
+        tipBanner.innerHTML = `<i class="bi bi-lightbulb"></i> ${esc(data.ok ? data.tip : data.error)}`;
+      })
+      .finally(() => { tipBtn.disabled = false; });
+  });
+
+  endBtn.addEventListener('click', function () {
+    if (!confirm('End this discussion and get your evaluation?')) return;
+    endBtn.disabled = true;
+    endBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Evaluating…';
+    fetch(`/api/gd/${SESSION_ID}/end`, { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) { window.location.href = data.redirect; }
+        else { alert(data.error); endBtn.disabled = false; endBtn.innerHTML = '<i class="bi bi-flag"></i> End & Evaluate'; }
+      })
+      .catch(() => { alert('Something went wrong ending the session.'); endBtn.disabled = false; endBtn.innerHTML = '<i class="bi bi-flag"></i> End & Evaluate'; });
+  });
+
+  // Simple countdown timer (client-side only; ending is manual via the button above)
+  let remaining = {{ gd_session.time_limit_minutes }} * 60;
+  const timerDisplay = document.getElementById('timerDisplay');
+  setInterval(() => {
+    if (remaining <= 0) return;
+    remaining -= 1;
+    const m = Math.floor(remaining / 60), s = remaining % 60;
+    timerDisplay.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+  }, 1000);
+
+  scrollDown();
+});
+</script>
+{% endblock %}

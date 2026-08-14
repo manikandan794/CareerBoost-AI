@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}AI Skill Gap Analyzer — CareerBoost AI{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="mb-4 animate-fade-up">
+    <a href="{{ url_for('ai_coach.hub') }}" class="text-muted-custom small text-decoration-none"><i class="bi bi-arrow-left"></i> AI Career Coach</a>
+    <h3 class="fw-bold mb-1 mt-1"><i class="bi bi-search-heart text-primary-custom"></i> AI Skill Gap Analyzer</h3>
+    <p class="text-muted-custom mb-0">Find out exactly what's between you and your target role.</p>
+  </div>
+
+  {% include 'components/ai_not_configured.html' %}
+
+  <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="card-cb p-4 animate-fade-up">
+        <form id="gapForm">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Your current skills</label>
+            <textarea class="form-control form-control-cb" name="current_skills" rows="4" placeholder="e.g. Python, basic SQL, Git, HTML/CSS" required></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Target role</label>
+            <input type="text" class="form-control form-control-cb" name="target_role" placeholder="e.g. Full Stack Developer" required>
+          </div>
+          <button type="submit" class="btn btn-primary-cb w-100" id="gapSubmit" {{ 'disabled' if not gemini_configured }}>
+            <i class="bi bi-magic"></i> Analyze Gap
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <div id="gapResult"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const form = document.getElementById('gapForm');
+  const resultBox = document.getElementById('gapResult');
+  const submitBtn = document.getElementById('gapSubmit');
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+  function listItems(arr) { return (arr || []).map(i => `<li>${esc(i)}</li>`).join(''); }
+  function priorityBadge(p) {
+    const cls = p === 'High' ? 'badge-hard' : p === 'Medium' ? 'badge-medium' : 'badge-easy';
+    return `<span class="badge ${cls} me-1 mb-1">${esc(p)}</span>`;
+  }
+
+  function renderReport(r) {
+    const pct = Math.max(0, Math.min(100, r.readiness_percent || 0));
+    resultBox.innerHTML = `
+      <div class="card-cb p-4 mb-3 animate-fade-up d-flex flex-row align-items-center gap-4 flex-wrap">
+        <div class="ats-score-ring" style="background: conic-gradient(var(--primary) ${pct * 3.6}deg, var(--surface-alt) 0deg); color: var(--text);">
+          <span style="background:var(--surface); width:70px;height:70px;border-radius:50%;display:flex;align-items:center;justify-content:center;">${pct}%</span>
+        </div>
+        <div>
+          <h6 class="fw-bold mb-1">Role Readiness</h6>
+          <p class="text-muted-custom small mb-0">Your estimated readiness for this role today, based on what you told the AI.</p>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <div class="card-cb p-3 h-100">
+            <h6 class="fw-bold small text-success">✓ Skills You Already Have</h6>
+            <ul class="small mb-0">${listItems(r.existing_skills)}</ul>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card-cb p-3 h-100">
+            <h6 class="fw-bold small">Missing Skills</h6>
+            ${(r.missing_skills || []).map(m => `
+              <div class="d-flex justify-content-between align-items-center border-bottom py-1">
+                <span class="small">${esc(m.skill)} <span class="text-muted-custom">(${esc(m.level)})</span></span>
+                ${priorityBadge(m.priority)}
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div class="card-cb p-3 mb-3">
+        <h6 class="fw-bold small">Recommended Learning Order</h6>
+        <ol class="small mb-0">${(r.recommended_learning_order || []).map(i => `<li>${esc(i)}</li>`).join('')}</ol>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="card-cb p-3 h-100">
+            <h6 class="fw-bold small">Practice Recommendations</h6>
+            <ul class="small mb-0">${listItems(r.practice_recommendations)}</ul>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card-cb p-3 h-100">
+            <h6 class="fw-bold small">Project Recommendations</h6>
+            <ul class="small mb-0">${listItems(r.project_recommendations)}</ul>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card-cb p-3 h-100">
+            <h6 class="fw-bold small">Interview Topics</h6>
+            <ul class="small mb-0">${listItems(r.interview_topics)}</ul>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const payload = Object.fromEntries(new FormData(form).entries());
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Analyzing…';
+    resultBox.innerHTML = '<div class="card-cb p-5 text-center text-muted-custom"><div class="spinner-border text-primary mb-3"></div><div>Comparing your skills to the role…</div></div>';
+
+    fetch('/api/ai/skill-gap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) { renderReport(data.report); }
+        else { resultBox.innerHTML = `<div class="alert alert-danger">${esc(data.error)}</div>`; }
+      })
+      .catch(() => { resultBox.innerHTML = '<div class="alert alert-danger">Something went wrong. Please try again.</div>'; })
+      .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="bi bi-magic"></i> Analyze Gap';
+      });
+  });
+});
+</script>
+{% endblock %}

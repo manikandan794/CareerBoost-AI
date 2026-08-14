@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}AI Mock Interview Coach — CareerBoost AI{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="mb-4 animate-fade-up">
+    <a href="{{ url_for('ai_coach.hub') }}" class="text-muted-custom small text-decoration-none"><i class="bi bi-arrow-left"></i> AI Career Coach</a>
+    <h3 class="fw-bold mb-1 mt-1"><i class="bi bi-chat-square-text text-primary-custom"></i> AI Mock Interview Coach</h3>
+    <p class="text-muted-custom mb-0">One question at a time — answer, get scored feedback, and move on.</p>
+  </div>
+
+  {% include 'components/ai_not_configured.html' %}
+
+  <div id="setupCard" class="card-cb p-4 animate-fade-up" {{ 'style=display:none' if not gemini_configured }}>
+    <div class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label small fw-semibold">Mode</label>
+        <select class="form-select form-select-cb" id="modeSelect">
+          <option>Technical</option>
+          <option>HR</option>
+          <option>Behavioral</option>
+        </select>
+      </div>
+      <div class="col-md-5">
+        <label class="form-label small fw-semibold">Category</label>
+        <select class="form-select form-select-cb" id="categorySelect">
+          <option>Python</option><option>Java</option><option>JavaScript</option><option>SQL</option>
+          <option>DBMS</option><option>OOP</option><option>Data Structures</option><option>Algorithms</option>
+          <option>Operating Systems</option><option>Computer Networks</option><option>Web Development</option>
+          <option>Git/GitHub</option><option>General HR</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <button class="btn btn-primary-cb w-100" id="startBtn"><i class="bi bi-play-fill"></i> Start Interview</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="interviewArea" class="mt-4"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const setupCard = document.getElementById('setupCard');
+  const area = document.getElementById('interviewArea');
+  const startBtn = document.getElementById('startBtn');
+  let state = { conversationId: null, category: '', mode: '', question: '', questionNumber: 0, feedbackLog: [] };
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+  function listItems(arr) { return (arr || []).map(i => `<li>${esc(i)}</li>`).join(''); }
+
+  function renderQuestion() {
+    area.innerHTML = `
+      <div class="card-cb p-4 mb-3 animate-fade-up">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="badge text-bg-light border">${esc(state.category)} · ${esc(state.mode)}</span>
+          <span class="text-muted-custom small">Question ${state.questionNumber}</span>
+        </div>
+        <p class="fw-semibold mb-0"><i class="bi bi-robot text-primary-custom me-1"></i> ${esc(state.question)}</p>
+      </div>
+      <div class="card-cb p-4">
+        <textarea class="form-control form-control-cb" id="answerBox" rows="5" placeholder="Type your answer as you would say it out loud…"></textarea>
+        <div class="d-flex gap-2 mt-3">
+          <button class="btn btn-primary-cb" id="submitAnswerBtn"><i class="bi bi-send"></i> Submit Answer</button>
+          ${state.questionNumber >= 1 ? '<button class="btn btn-outline-cb" id="finishBtn"><i class="bi bi-flag"></i> Finish &amp; Get Report</button>' : ''}
+        </div>
+      </div>
+      <div id="feedbackLog" class="mt-3"></div>
+    `;
+    renderFeedbackLog();
+    document.getElementById('submitAnswerBtn').addEventListener('click', submitAnswer);
+    const finishBtn = document.getElementById('finishBtn');
+    if (finishBtn) finishBtn.addEventListener('click', finish);
+  }
+
+  function renderFeedbackLog() {
+    const box = document.getElementById('feedbackLog');
+    if (!box) return;
+    box.innerHTML = state.feedbackLog.slice().reverse().map(f => `
+      <div class="card-cb p-3 mb-2">
+        <div class="d-flex justify-content-between">
+          <span class="fw-semibold small">Q${f.qnum} feedback</span>
+          <span class="badge ${f.score >= 7 ? 'badge-easy' : f.score >= 4 ? 'badge-medium' : 'badge-hard'}">${f.score}/10</span>
+        </div>
+        <div class="row g-2 mt-1">
+          <div class="col-md-6"><span class="small text-success fw-semibold">Strengths</span><ul class="small mb-0">${listItems(f.strengths)}</ul></div>
+          <div class="col-md-6"><span class="small text-danger fw-semibold">Weaknesses</span><ul class="small mb-0">${listItems(f.weaknesses)}</ul></div>
+        </div>
+        <p class="small text-muted-custom mt-1 mb-0"><i class="bi bi-lightbulb"></i> ${esc(f.improvement_tip)}</p>
+      </div>`).join('');
+  }
+
+  function submitAnswer() {
+    const answer = document.getElementById('answerBox').value.trim();
+    if (!answer) return;
+    const btn = document.getElementById('submitAnswerBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Evaluating…';
+
+    fetch('/api/ai/interview/answer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversation_id: state.conversationId, answer }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) { alert(data.error); btn.disabled = false; btn.innerHTML = '<i class="bi bi-send"></i> Submit Answer'; return; }
+        state.feedbackLog.push({ qnum: state.questionNumber, score: data.score, strengths: data.strengths, weaknesses: data.weaknesses, improvement_tip: data.improvement_tip });
+        state.question = data.next_question;
+        state.questionNumber = data.question_number;
+        renderQuestion();
+      })
+      .catch(() => { alert('Something went wrong. Please try again.'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-send"></i> Submit Answer'; });
+  }
+
+  function finish() {
+    area.innerHTML = '<div class="card-cb p-5 text-center text-muted-custom"><div class="spinner-border text-primary mb-3"></div><div>Generating your final report…</div></div>';
+    fetch('/api/ai/interview/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversation_id: state.conversationId }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) { area.innerHTML = `<div class="alert alert-danger">${esc(data.error)}</div>`; return; }
+        renderReport(data.report);
+      })
+      .catch(() => { area.innerHTML = '<div class="alert alert-danger">Something went wrong generating the report.</div>'; });
+  }
+
+  function renderReport(r) {
+    area.innerHTML = `
+      <div class="card-cb p-4 mb-3 text-center animate-fade-up">
+        <h2 class="fw-bold text-primary-custom mb-0">${r.overall_score}/100</h2>
+        <p class="text-muted-custom mb-0">Overall Interview Score</p>
+      </div>
+      <div class="card-cb p-3 mb-3"><h6 class="fw-bold small">Summary</h6><p class="small mb-0">${esc(r.summary)}</p></div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-6"><div class="card-cb p-3 h-100"><h6 class="fw-bold small text-success">Strengths</h6><ul class="small mb-0">${listItems(r.strengths)}</ul></div></div>
+        <div class="col-md-6"><div class="card-cb p-3 h-100"><h6 class="fw-bold small text-danger">Weaknesses</h6><ul class="small mb-0">${listItems(r.weaknesses)}</ul></div></div>
+      </div>
+      <div class="card-cb p-3 mb-3"><h6 class="fw-bold small">Improvement Plan</h6><ul class="small mb-0">${listItems(r.improvement_plan)}</ul></div>
+      <div class="card-cb p-3 mb-3"><h6 class="fw-bold small"><i class="bi bi-heart-pulse"></i> Confidence Tip</h6><p class="small mb-0">${esc(r.confidence_tip)}</p></div>
+      <button class="btn btn-outline-cb" onclick="location.reload()"><i class="bi bi-arrow-repeat"></i> Start another interview</button>
+    `;
+  }
+
+  startBtn.addEventListener('click', function () {
+    state.category = document.getElementById('categorySelect').value;
+    state.mode = document.getElementById('modeSelect').value;
+    startBtn.disabled = true;
+    startBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+    fetch('/api/ai/interview/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category: state.category, mode: state.mode }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) { alert(data.error); startBtn.disabled = false; startBtn.innerHTML = '<i class="bi bi-play-fill"></i> Start Interview'; return; }
+        state.conversationId = data.conversation_id;
+        state.question = data.question;
+        state.questionNumber = data.question_number;
+        setupCard.style.display = 'none';
+        renderQuestion();
+      })
+      .catch(() => { alert('Something went wrong starting the interview.'); startBtn.disabled = false; startBtn.innerHTML = '<i class="bi bi-play-fill"></i> Start Interview'; });
+  });
+});
+</script>
+{% endblock %}

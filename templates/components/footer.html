@@ -1,0 +1,42 @@
+<footer class="footer-cb">
+  <div class="container">
+    <div class="row gy-4">
+      <div class="col-lg-4">
+        <h5 class="text-primary-custom fw-bold mb-3"><i class="bi bi-rocket-takeoff-fill"></i> CareerBoost AI</h5>
+        <p class="small">An all-in-one placement preparation platform — resumes, aptitude, interviews, and coding practice, built for students who want to land their dream job.</p>
+      </div>
+      <div class="col-lg-2 col-6">
+        <h6 class="fw-bold mb-3">Platform</h6>
+        <ul class="list-unstyled small">
+          <li class="mb-2"><a href="{{ url_for('quiz.categories') if logged_in else url_for('auth.login') }}">Aptitude Quiz</a></li>
+          <li class="mb-2"><a href="{{ url_for('interview.index') if logged_in else url_for('auth.login') }}">Interview Qs</a></li>
+          <li class="mb-2"><a href="{{ url_for('coding.index') if logged_in else url_for('auth.login') }}">Coding Practice</a></li>
+          <li class="mb-2"><a href="{{ url_for('companies.index') if logged_in else url_for('auth.login') }}">Companies</a></li>
+        </ul>
+      </div>
+      <div class="col-lg-2 col-6">
+        <h6 class="fw-bold mb-3">Company</h6>
+        <ul class="list-unstyled small">
+          <li class="mb-2"><a href="{{ url_for('main.about') }}">About Us</a></li>
+          <li class="mb-2"><a href="{{ url_for('main.contact') }}">Contact</a></li>
+        </ul>
+      </div>
+      <div class="col-lg-4">
+        <h6 class="fw-bold mb-3">Stay in the loop</h6>
+        <div class="input-group">
+          <input type="email" id="newsletter-email" class="form-control form-control-cb" placeholder="Your email">
+          <button class="btn btn-primary-cb" type="button" id="newsletter-btn"><i class="bi bi-send"></i></button>
+        </div>
+        <small id="newsletter-msg" class="d-block mt-2"></small>
+        <div class="d-flex gap-3 mt-3 fs-5">
+          <a href="#"><i class="bi bi-linkedin"></i></a>
+          <a href="#"><i class="bi bi-github"></i></a>
+          <a href="#"><i class="bi bi-twitter-x"></i></a>
+          <a href="#"><i class="bi bi-instagram"></i></a>
+        </div>
+      </div>
+    </div>
+    <hr class="mt-4" style="border-color: var(--border);">
+    <p class="small text-center mb-0">&copy; {{ current_year }} CareerBoost AI. Built for learning purposes — all placement data is illustrative.</p>
+  </div>
+</footer>

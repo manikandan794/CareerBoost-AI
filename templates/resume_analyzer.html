@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Resume Analyzer — CareerBoost AI{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="mb-4 animate-fade-up">
+    <h3 class="fw-bold">Resume Analyzer</h3>
+    <p class="text-muted-custom">Paste your resume text (and optionally a job description) to get an instant score and feedback.</p>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <form method="POST" action="{{ url_for('resume.analyzer') }}" class="card-cb p-4 animate-fade-up">
+        <label class="form-label fw-semibold">Resume Content</label>
+        <textarea name="resume_text" rows="10" class="form-control form-control-cb mb-3" placeholder="Paste the full text of your resume here...">{{ request.form.resume_text if request.form else '' }}</textarea>
+
+        <label class="form-label fw-semibold">Target Job Description <span class="text-muted-custom fw-normal">(optional)</span></label>
+        <textarea name="job_description" rows="6" class="form-control form-control-cb mb-3" placeholder="Paste the job description to check keyword match..."></textarea>
+
+        <button type="submit" class="btn btn-primary-cb w-100"><i class="bi bi-search-heart me-1"></i> Analyze Resume</button>
+      </form>
+    </div>
+
+    <div class="col-lg-6">
+      {% if result %}
+      <div class="card-cb p-4 mb-4 animate-fade-up text-center">
+        <h6 class="text-muted-custom mb-2">Overall Resume Score</h6>
+        <div class="display-4 fw-bold text-primary-custom">{{ result.overall_score }}<span class="fs-3">/100</span></div>
+        <div class="progress-cb mt-3">
+          <div class="progress-bar" style="width: {{ result.overall_score }}%;"></div>
+        </div>
+      </div>
+
+      <div class="card-cb p-4 mb-4 animate-fade-up delay-1">
+        <h6 class="fw-bold mb-2"><i class="bi bi-list-check text-primary-custom"></i> Sections</h6>
+        <p class="mb-1"><span class="badge badge-easy me-1">Found</span>
+          {% for s in result.sections_found %}<span class="badge bg-secondary bg-opacity-10 text-secondary me-1">{{ s }}</span>{% endfor %}
+        </p>
+        {% if result.sections_missing %}
+        <p class="mb-0"><span class="badge badge-hard me-1">Missing</span>
+          {% for s in result.sections_missing %}<span class="badge bg-secondary bg-opacity-10 text-secondary me-1">{{ s }}</span>{% endfor %}
+        </p>
+        {% endif %}
+      </div>
+
+      {% if result.keyword_match_score is not none %}
+      <div class="card-cb p-4 mb-4 animate-fade-up delay-2">
+        <h6 class="fw-bold mb-2"><i class="bi bi-key text-primary-custom"></i> Keyword Match: {{ result.keyword_match_score }}%</h6>
+        {% if result.missing_keywords %}
+        <p class="small text-muted-custom mb-1">Consider adding:</p>
+        <p class="mb-0">{% for k in result.missing_keywords[:15] %}<span class="badge bg-warning bg-opacity-15 text-warning me-1 mb-1">{{ k }}</span>{% endfor %}</p>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <div class="card-cb p-4 animate-fade-up delay-3">
+        <h6 class="fw-bold mb-2"><i class="bi bi-lightbulb text-primary-custom"></i> Tips</h6>
+        <ul class="mb-0">
+          {% for tip in result.tips %}<li class="mb-1">{{ tip }}</li>{% endfor %}
+        </ul>
+      </div>
+      {% else %}
+      <div class="card-cb p-5 text-center h-100 d-flex flex-column justify-content-center animate-fade-up">
+        <i class="bi bi-file-earmark-text fs-1 text-primary-custom mb-3"></i>
+        <p class="text-muted-custom mb-0">Your analysis results will appear here once you submit your resume.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

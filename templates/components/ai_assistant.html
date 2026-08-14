@@ -1,0 +1,28 @@
+<!-- Floating AI Assistant -->
+<div id="cbAssistant" class="cb-assistant">
+  <button id="cbAssistantToggle" class="cb-assistant-fab" type="button" aria-label="Open AI Assistant">
+    <i class="bi bi-robot"></i>
+  </button>
+
+  <div id="cbAssistantPanel" class="cb-assistant-panel">
+    <div class="cb-assistant-header">
+      <div class="d-flex align-items-center gap-2">
+        <span class="cb-assistant-avatar"><i class="bi bi-robot"></i></span>
+        <div>
+          <div class="fw-bold small">CareerBoost AI Assistant</div>
+          <div class="cb-assistant-status"><span class="cb-dot"></span> Ready to help on this page</div>
+        </div>
+      </div>
+      <button id="cbAssistantClose" class="btn-close btn-close-white" type="button" aria-label="Close"></button>
+    </div>
+
+    <div id="cbAssistantMessages" class="cb-assistant-messages"></div>
+
+    <div class="cb-assistant-suggestions" id="cbAssistantSuggestions"></div>
+
+    <form id="cbAssistantForm" class="cb-assistant-input">
+      <input type="text" id="cbAssistantInput" placeholder="Ask me anything about this page…" autocomplete="off">
+      <button type="submit" aria-label="Send"><i class="bi bi-send-fill"></i></button>
+    </form>
+  </div>
+</div>

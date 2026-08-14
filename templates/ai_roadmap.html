@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block title %}AI Career Roadmap — CareerBoost AI{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="mb-4 animate-fade-up">
+    <a href="{{ url_for('ai_coach.hub') }}" class="text-muted-custom small text-decoration-none"><i class="bi bi-arrow-left"></i> AI Career Coach</a>
+    <h3 class="fw-bold mb-1 mt-1"><i class="bi bi-signpost-split text-primary-custom"></i> AI Career Roadmap Generator</h3>
+    <p class="text-muted-custom mb-0">Tell the AI where you are and where you want to go — it builds the plan.</p>
+  </div>
+
+  {% include 'components/ai_not_configured.html' %}
+
+  <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="card-cb p-4 animate-fade-up">
+        <form id="roadmapForm">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Current education level</label>
+            <select class="form-select form-select-cb" name="education_level">
+              <option>1st/2nd year student</option>
+              <option>Final year student</option>
+              <option>Recent graduate</option>
+              <option>Working professional switching careers</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Current skills</label>
+            <textarea class="form-control form-control-cb" name="current_skills" rows="2" placeholder="e.g. Python basics, HTML/CSS, SQL fundamentals" required></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Target job role</label>
+            <input type="text" class="form-control form-control-cb" name="target_role" placeholder="e.g. Backend Developer, Data Analyst" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Experience level</label>
+            <select class="form-select form-select-cb" name="experience_level">
+              <option>Complete Beginner</option>
+              <option>Some Projects Done</option>
+              <option>Intermediate</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Study time available</label>
+            <input type="text" class="form-control form-control-cb" name="study_time" placeholder="e.g. 2 hours/day, weekends only" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Preferred technology <span class="text-muted-custom">(optional)</span></label>
+            <input type="text" class="form-control form-control-cb" name="preferred_tech" placeholder="e.g. Java, MERN, Data Science">
+          </div>
+          <button type="submit" class="btn btn-primary-cb w-100" id="roadmapSubmit" {{ 'disabled' if not gemini_configured }}>
+            <i class="bi bi-magic"></i> Generate Roadmap
+          </button>
+        </form>
+      </div>
+
+      {% if history %}
+      <div class="card-cb p-3 mt-3 animate-fade-up delay-1">
+        <h6 class="fw-bold small mb-2">Previous roadmaps</h6>
+        {% for h in history %}
+        <div class="small text-muted-custom border-bottom py-1">{{ h.target_role }} — {{ h.created_at[:10] }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="col-lg-8">
+      <div id="roadmapResult"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const form = document.getElementById('roadmapForm');
+  const resultBox = document.getElementById('roadmapResult');
+  const submitBtn = document.getElementById('roadmapSubmit');
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+  function listItems(arr) { return (arr || []).map(i => `<li>${esc(i)}</li>`).join(''); }
+
+  function renderRoadmap(r) {
+    resultBox.innerHTML = `
+      <div class="card-cb p-4 mb-3 animate-fade-up">
+        <h5 class="fw-bold mb-1"><i class="bi bi-flag-fill text-primary-custom"></i> ${esc(r.career_goal)}</h5>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <div class="card-cb p-3 h-100">
+            <h6 class="fw-bold small">Required Skills</h6>
+            <ul class="small mb-0">${listItems(r.required_skills)}</ul>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card-cb p-3 h-100">
+            <h6 class="fw-bold small">Current Skill Gaps</h6>
+            <ul class="small mb-0">${listItems(r.skill_gaps)}</ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-cb p-4 mb-3">
+        <h6 class="fw-bold mb-3"><i class="bi bi-diagram-3"></i> Week-by-Week Plan</h6>
+        <div class="timeline">
+          ${(r.weekly_plan || []).map(w => `
+            <div class="d-flex gap-3 mb-3">
+              <div class="badge-cb-week">${esc(w.week)}</div>
+              <div>
+                <div class="fw-semibold small">${esc(w.focus)}</div>
+                <ul class="small text-muted-custom mb-0">${listItems(w.tasks)}</ul>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <div class="card-cb p-3 h-100">
+            <h6 class="fw-bold small">Projects to Build</h6>
+            ${(r.projects_to_build || []).map(p => `<div class="mb-2"><div class="fw-semibold small">${esc(p.name)}</div><div class="small text-muted-custom">${esc(p.description)}</div></div>`).join('')}
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card-cb p-3 h-100">
+            <h6 class="fw-bold small">Practice Topics</h6>
+            <ul class="small mb-0">${listItems(r.practice_topics)}</ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-4">
+          <div class="card-cb p-3 h-100">
+            <h6 class="fw-bold small">Interview Prep</h6>
+            <ul class="small mb-0">${listItems(r.interview_prep)}</ul>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card-cb p-3 h-100">
+            <h6 class="fw-bold small">Resume Prep</h6>
+            <ul class="small mb-0">${listItems(r.resume_prep)}</ul>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card-cb p-3 h-100">
+            <h6 class="fw-bold small">Placement Prep</h6>
+            <ul class="small mb-0">${listItems(r.placement_prep)}</ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-cb p-4">
+        <h6 class="fw-bold mb-3"><i class="bi bi-trophy"></i> Milestones</h6>
+        <div class="d-flex flex-wrap gap-2">
+          ${(r.milestones || []).map(m => `<span class="badge rounded-pill text-bg-light border px-3 py-2">${esc(m.milestone)} — ${esc(m.target)}</span>`).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const payload = Object.fromEntries(new FormData(form).entries());
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating…';
+    resultBox.innerHTML = '<div class="card-cb p-5 text-center text-muted-custom"><div class="spinner-border text-primary mb-3"></div><div>Building your personalized roadmap…</div></div>';
+
+    fetch('/api/ai/roadmap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) {
+          renderRoadmap(data.roadmap);
+        } else {
+          resultBox.innerHTML = `<div class="alert alert-danger">${esc(data.error)}</div>`;
+        }
+      })
+      .catch(() => { resultBox.innerHTML = '<div class="alert alert-danger">Something went wrong. Please try again.</div>'; })
+      .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="bi bi-magic"></i> Generate Roadmap';
+      });
+  });
+});
+</script>
+<style>
+.badge-cb-week {
+  flex-shrink: 0; min-width: 74px; height: 32px; border-radius: 999px;
+  background: var(--surface-alt); color: var(--primary); font-weight: 700; font-size: 0.75rem;
+  display: flex; align-items: center; justify-content: center; padding: 0 0.75rem;
+}
+</style>
+{% endblock %}

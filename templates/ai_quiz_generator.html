@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}AI Quiz Generator — CareerBoost AI{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="mb-4 animate-fade-up">
+    <a href="{{ url_for('ai_coach.hub') }}" class="text-muted-custom small text-decoration-none"><i class="bi bi-arrow-left"></i> AI Career Coach</a>
+    <h3 class="fw-bold mb-1 mt-1"><i class="bi bi-patch-question text-primary-custom"></i> AI Quiz Generator</h3>
+    <p class="text-muted-custom mb-0">Generate a fresh quiz on any subject, any difficulty — instantly.</p>
+  </div>
+
+  {% include 'components/ai_not_configured.html' %}
+
+  <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="card-cb p-4 animate-fade-up">
+        <form id="genForm">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Subject</label>
+            <input type="text" class="form-control form-control-cb" name="subject" placeholder="e.g. DBMS, Python, Aptitude" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Topic</label>
+            <input type="text" class="form-control form-control-cb" name="topic" placeholder="e.g. Normalization, Loops, Time & Work" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Difficulty</label>
+            <select class="form-select form-select-cb" name="difficulty">
+              <option>Easy</option><option selected>Medium</option><option>Hard</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Number of questions</label>
+            <input type="number" class="form-control form-control-cb" name="num_questions" value="5" min="3" max="15">
+          </div>
+          <button type="submit" class="btn btn-primary-cb w-100" id="genSubmit" {{ 'disabled' if not gemini_configured }}>
+            <i class="bi bi-magic"></i> Generate Quiz
+          </button>
+        </form>
+      </div>
+
+      {% if history %}
+      <div class="card-cb p-3 mt-3 animate-fade-up delay-1">
+        <h6 class="fw-bold small mb-2">Recent attempts</h6>
+        {% for h in history %}
+        <div class="d-flex justify-content-between small border-bottom py-1">
+          <span>{{ h.subject }} · {{ h.topic }}</span>
+          <span class="fw-semibold">{{ h.score }}/{{ h.total }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="col-lg-8">
+      <div id="quizArea"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const genForm = document.getElementById('genForm');
+  const genSubmit = document.getElementById('genSubmit');
+  const quizArea = document.getElementById('quizArea');
+  let state = { subject: '', topic: '', difficulty: '', questions: [] };
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+
+  function renderQuiz() {
+    quizArea.innerHTML = `
+      <div class="card-cb p-4 animate-fade-up">
+        <h5 class="fw-bold mb-3">${esc(state.subject)} — ${esc(state.topic)} <span class="badge badge-medium">${esc(state.difficulty)}</span></h5>
+        <form id="takeForm">
+          ${state.questions.map((q, i) => `
+            <div class="mb-4">
+              <p class="fw-semibold mb-2">${i + 1}. ${esc(q.question)}</p>
+              ${['A','B','C','D'].map(opt => `
+                <label class="quiz-option d-block">
+                  <input type="radio" name="q${i}" value="${opt}" class="form-check-input me-2">
+                  <span class="quiz-option-label">${opt}. ${esc(q['option_' + opt.toLowerCase()])}</span>
+                </label>`).join('')}
+            </div>`).join('')}
+          <button type="submit" class="btn btn-primary-cb"><i class="bi bi-check2-circle"></i> Submit Quiz</button>
+        </form>
+      </div>`;
+
+    document.getElementById('takeForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const answers = {};
+      state.questions.forEach((_, i) => {
+        const checked = document.querySelector(`input[name="q${i}"]:checked`);
+        if (checked) answers[i] = checked.value;
+      });
+      submitQuiz(answers);
+    });
+  }
+
+  function submitQuiz(answers) {
+    quizArea.innerHTML = '<div class="card-cb p-5 text-center text-muted-custom"><div class="spinner-border text-primary mb-3"></div><div>Grading…</div></div>';
+    fetch('/api/ai/quiz-submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject: state.subject, topic: state.topic, difficulty: state.difficulty, questions: state.questions, answers }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) { quizArea.innerHTML = `<div class="alert alert-danger">${esc(data.error)}</div>`; return; }
+        renderResult(data);
+      })
+      .catch(() => { quizArea.innerHTML = '<div class="alert alert-danger">Something went wrong grading the quiz.</div>'; });
+  }
+
+  function renderResult(data) {
+    const pct = Math.round((data.score / data.total) * 100);
+    quizArea.innerHTML = `
+      <div class="card-cb p-4 mb-3 animate-fade-up text-center">
+        <h2 class="fw-bold text-primary-custom mb-0">${data.score}/${data.total}</h2>
+        <p class="text-muted-custom">${pct}% correct</p>
+      </div>
+      ${data.weak_topics && data.weak_topics.length ? `
+      <div class="card-cb p-3 mb-3">
+        <h6 class="fw-bold small">Weak Topics</h6>
+        <div class="d-flex flex-wrap gap-2 mb-2">${data.weak_topics.map(t => `<span class="badge badge-hard">${esc(t)}</span>`).join('')}</div>
+        ${data.revision_tip ? `<p class="small text-muted-custom mb-0">${esc(data.revision_tip)}</p>` : ''}
+      </div>` : ''}
+      <div class="card-cb p-4">
+        <h6 class="fw-bold mb-3">Review</h6>
+        ${state.questions.map((q, i) => `
+          <div class="mb-3 pb-3 border-bottom">
+            <p class="fw-semibold small mb-1">${i + 1}. ${esc(q.question)}</p>
+            <p class="small mb-1"><span class="text-success">Correct: ${esc(q.correct_option)}. ${esc(q['option_' + q.correct_option.toLowerCase()])}</span></p>
+            <p class="small text-muted-custom mb-0">${esc(q.explanation)}</p>
+          </div>`).join('')}
+      </div>
+      <button class="btn btn-outline-cb mt-3" onclick="location.reload()"><i class="bi bi-arrow-repeat"></i> Generate another quiz</button>
+    `;
+  }
+
+  genForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const payload = Object.fromEntries(new FormData(genForm).entries());
+    genSubmit.disabled = true;
+    genSubmit.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating…';
+    quizArea.innerHTML = '<div class="card-cb p-5 text-center text-muted-custom"><div class="spinner-border text-primary mb-3"></div><div>Writing your quiz…</div></div>';
+
+    fetch('/api/ai/quiz-generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) {
+          state = { subject: data.subject, topic: data.topic, difficulty: data.difficulty, questions: data.questions };
+          renderQuiz();
+        } else {
+          quizArea.innerHTML = `<div class="alert alert-danger">${esc(data.error)}</div>`;
+        }
+      })
+      .catch(() => { quizArea.innerHTML = '<div class="alert alert-danger">Something went wrong. Please try again.</div>'; })
+      .finally(() => {
+        genSubmit.disabled = false;
+        genSubmit.innerHTML = '<i class="bi bi-magic"></i> Generate Quiz';
+      });
+  });
+});
+</script>
+{% endblock %}

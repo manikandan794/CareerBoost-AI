@@ -1,0 +1,74 @@
+<nav class="navbar navbar-expand-lg navbar-cb sticky-top">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('main.home') }}">
+      <i class="bi bi-rocket-takeoff-fill"></i> CareerBoost <span class="fw-normal">AI</span>
+    </a>
+    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
+      <i class="bi bi-list fs-2"></i>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navMain">
+      <ul class="navbar-nav mx-auto">
+        <li class="nav-item"><a class="nav-link {{ 'active' if request.endpoint == 'main.home' }}" href="{{ url_for('main.home') }}">Home</a></li>
+        {% if logged_in %}
+        <li class="nav-item"><a class="nav-link {{ 'active' if request.endpoint == 'dashboard.index' }}" href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link {{ 'active' if request.endpoint == 'quiz.categories' }}" href="{{ url_for('quiz.categories') }}">Aptitude</a></li>
+        <li class="nav-item"><a class="nav-link {{ 'active' if request.endpoint == 'interview.index' }}" href="{{ url_for('interview.index') }}">Interview Qs</a></li>
+        <li class="nav-item"><a class="nav-link {{ 'active' if request.endpoint == 'coding.index' }}" href="{{ url_for('coding.index') }}">Coding</a></li>
+        <li class="nav-item"><a class="nav-link {{ 'active' if request.endpoint == 'companies.index' }}" href="{{ url_for('companies.index') }}">Companies</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle {{ 'active' if request.endpoint and (request.endpoint.startswith('ai_coach.') or request.endpoint.startswith('gd.')) }}" href="#" role="button" data-bs-toggle="dropdown">
+            <i class="bi bi-robot"></i> AI Coach
+          </a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="{{ url_for('ai_coach.hub') }}"><i class="bi bi-grid-1x2 me-2"></i>AI Coach Hub</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('ai_coach.roadmap_page') }}"><i class="bi bi-signpost-split me-2"></i>Career Roadmap</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('ai_coach.skill_gap_page') }}"><i class="bi bi-search-heart me-2"></i>Skill Gap Analyzer</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('ai_coach.resume_match_page') }}"><i class="bi bi-file-earmark-check me-2"></i>Resume ↔ JD Match</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('ai_coach.interview_coach_page') }}"><i class="bi bi-chat-square-text me-2"></i>Mock Interview Coach</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('ai_coach.study_page') }}"><i class="bi bi-mortarboard me-2"></i>Study Assistant</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('ai_coach.quiz_generator_page') }}"><i class="bi bi-patch-question me-2"></i>AI Quiz Generator</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('ai_coach.company_prep_page') }}"><i class="bi bi-building-gear me-2"></i>Company Preparation</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="{{ url_for('gd.home') }}"><i class="bi bi-people me-2"></i>Group Discussion</a></li>
+          </ul>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Resume</a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="{{ url_for('resume.builder') }}"><i class="bi bi-file-earmark-person me-2"></i>Resume Builder</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('resume.analyzer') }}"><i class="bi bi-search-heart me-2"></i>Resume Analyzer</a></li>
+          </ul>
+        </li>
+        {% endif %}
+        <li class="nav-item"><a class="nav-link {{ 'active' if request.endpoint == 'main.about' }}" href="{{ url_for('main.about') }}">About</a></li>
+        <li class="nav-item"><a class="nav-link {{ 'active' if request.endpoint == 'main.contact' }}" href="{{ url_for('main.contact') }}">Contact</a></li>
+      </ul>
+
+      <div class="d-flex align-items-center gap-2 mt-3 mt-lg-0">
+        <button class="theme-toggle-btn" id="themeToggle" title="Toggle theme">
+          <i class="bi bi-moon-stars-fill" id="themeIcon"></i>
+        </button>
+
+        {% if logged_in %}
+        <div class="dropdown">
+          <button class="btn btn-outline-cb dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown">
+            <i class="bi bi-person-circle"></i> {{ session.get('full_name', 'Account').split(' ')[0] }}
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="{{ url_for('profile.index') }}"><i class="bi bi-person me-2"></i>My Profile</a></li>
+            {% if session.get('is_admin') %}
+            <li><a class="dropdown-item" href="{{ url_for('admin.dashboard') }}"><i class="bi bi-speedometer2 me-2"></i>Admin Panel</a></li>
+            {% endif %}
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+          </ul>
+        </div>
+        {% else %}
+        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-cb">Login</a>
+        <a href="{{ url_for('auth.signup') }}" class="btn btn-primary-cb">Sign Up</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</nav>

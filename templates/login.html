@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Login — CareerBoost AI{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="auth-card animate-fade-up">
+    <div class="text-center mb-4">
+      <i class="bi bi-rocket-takeoff-fill fs-1 text-primary-custom"></i>
+      <h3 class="fw-bold mt-2">Welcome Back</h3>
+      <p class="text-muted-custom">Login to continue your placement prep</p>
+    </div>
+    <form method="POST" action="{{ url_for('auth.login') }}" novalidate>
+      <div class="mb-3">
+        <label class="form-label">Email address</label>
+        <input type="email" class="form-control form-control-cb" name="email" placeholder="you@example.com" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Password</label>
+        <div class="input-group">
+          <input type="password" class="form-control form-control-cb" name="password" id="loginPassword" placeholder="••••••••" required>
+          <button class="btn btn-outline-cb toggle-password" type="button" data-target="#loginPassword"><i class="bi bi-eye"></i></button>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary-cb w-100 mt-2">Login <i class="bi bi-box-arrow-in-right ms-1"></i></button>
+    </form>
+
+    <div class="d-flex align-items-center gap-2 my-3">
+      <hr class="flex-grow-1 m-0"><small class="text-muted-custom">or</small><hr class="flex-grow-1 m-0">
+    </div>
+    <button type="button" class="btn btn-outline-cb w-100" id="faceLoginToggleBtn">
+      <i class="bi bi-camera-fill"></i> Login with Face Unlock
+    </button>
+
+    <div id="faceLoginPanel" class="mt-3" style="display:none;">
+      <p class="small text-muted-custom mb-2">
+        Face Unlock is an opt-in convenience feature (set up from your Profile after your first password login).
+        It isn't a replacement for your password — keep that safe too.
+      </p>
+      <div class="mb-2">
+        <input type="email" id="faceLoginEmail" class="form-control form-control-cb" placeholder="you@example.com">
+      </div>
+      <div id="faceLoginCameraWrap" style="display:none;" class="text-center mb-2">
+        <video id="faceLoginVideo" width="280" height="210" autoplay muted playsinline class="rounded border"></video>
+      </div>
+      <div id="faceLoginStatus" class="small mb-2"></div>
+      <button type="button" class="btn btn-primary-cb w-100" id="faceLoginScanBtn">
+        <i class="bi bi-camera"></i> Check for Face Unlock &amp; Scan
+      </button>
+    </div>
+
+    <p class="text-center mt-4 mb-0 text-muted-custom">
+      Don't have an account? <a href="{{ url_for('auth.signup') }}" class="text-primary-custom fw-semibold">Sign up</a>
+    </p>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/face_auth.js') }}"></script>
+<script>
+(function () {
+  const toggleBtn = document.getElementById("faceLoginToggleBtn");
+  const panel = document.getElementById("faceLoginPanel");
+  const emailInput = document.getElementById("faceLoginEmail");
+  const cameraWrap = document.getElementById("faceLoginCameraWrap");
+  const video = document.getElementById("faceLoginVideo");
+  const status = document.getElementById("faceLoginStatus");
+  const scanBtn = document.getElementById("faceLoginScanBtn");
+
+  let stream = null;
+  let cameraStarted = false;
+
+  toggleBtn.addEventListener("click", () => {
+    panel.style.display = panel.style.display === "none" ? "block" : "none";
+    if (panel.style.display === "block") emailInput.focus();
+  });
+
+  scanBtn.addEventListener("click", async () => {
+    const email = emailInput.value.trim();
+    if (!email) { status.innerHTML = '<span class="text-danger">Enter your email first.</span>'; return; }
+
+    scanBtn.disabled = true;
+
+    if (!cameraStarted) {
+      status.innerHTML = "Checking this account…";
+      try {
+        const checkRes = await fetch("{{ url_for('auth.face_check') }}", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const checkData = await checkRes.json();
+        if (!checkData.enrolled) {
+          status.innerHTML = '<span class="text-danger">Face Unlock isn\'t set up for this account yet. ' +
+            'Log in with your password, then enable it from your Profile.</span>';
+          scanBtn.disabled = false;
+          return;
+        }
+        status.innerHTML = "Loading face recognition… (first time may take a few seconds)";
+        await window.CareerBoostFaceAuth.ensureReady();
+        cameraWrap.style.display = "block";
+        stream = await window.CareerBoostFaceAuth.startCamera(video);
+        cameraStarted = true;
+        status.innerHTML = "Look at the camera, then click the button again to scan.";
+        scanBtn.innerHTML = '<i class="bi bi-camera"></i> Scan Now';
+        scanBtn.disabled = false;
+        return;
+      } catch (e) {
+        status.innerHTML = '<span class="text-danger">Couldn\'t access the camera or load face recognition. ' +
+          'Please allow camera access, or log in with your password.</span>';
+        scanBtn.disabled = false;
+        return;
+      }
+    }
+
+    status.innerHTML = "Scanning…";
+    try {
+      const descriptor = await window.CareerBoostFaceAuth.captureDescriptor(video);
+      if (!descriptor) {
+        status.innerHTML = '<span class="text-danger">No face detected — face the camera directly with good lighting.</span>';
+        scanBtn.disabled = false;
+        return;
+      }
+      const verifyRes = await fetch("{{ url_for('auth.face_verify') }}", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, descriptor }),
+      });
+      const verifyData = await verifyRes.json();
+      if (verifyData.ok) {
+        status.innerHTML = '<span class="text-success">Face matched! Redirecting…</span>';
+        window.CareerBoostFaceAuth.stopCamera(stream);
+        window.location.href = verifyData.redirect;
+      } else {
+        status.innerHTML = `<span class="text-danger">${verifyData.error || "Face didn't match."}</span>`;
+        scanBtn.disabled = false;
+      }
+    } catch (e) {
+      status.innerHTML = '<span class="text-danger">Something went wrong. Please try again.</span>';
+      scanBtn.disabled = false;
+    }
+  });
+})();
+</script>
+{% endblock %}

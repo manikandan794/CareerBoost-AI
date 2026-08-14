@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}{{ p.title }} — Coding Practice — CareerBoost AI{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/dracula.min.css">
+<style>
+  .CodeMirror { height: 380px; border-radius: 10px; font-size: 14.5px; }
+  .test-case-row { border-radius: 10px; padding: .75rem 1rem; margin-bottom: .5rem; border: 1px solid var(--border); }
+  .test-case-row.passed { border-color: var(--success); background: rgba(16,185,129,0.08); }
+  .test-case-row.failed { border-color: var(--danger); background: rgba(239,68,68,0.08); }
+  .hint-box { background: var(--surface-alt); border-radius: 10px; padding: .75rem 1rem; margin-bottom: .5rem; }
+  .preview-frame { width: 100%; height: 380px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container-fluid py-4 px-4">
+  <a href="{{ url_for('coding.index') }}" class="text-decoration-none text-muted-custom small mb-2 d-inline-block"><i class="bi bi-arrow-left"></i> Back to problems</a>
+
+  <div class="row g-4">
+    <!-- LEFT: Problem statement -->
+    <div class="col-lg-5">
+      <div class="card-cb p-4 animate-fade-up">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <h4 class="fw-bold mb-0">{{ p.title }}</h4>
+          <span class="badge {{ 'badge-easy' if p.difficulty == 'Easy' else ('badge-medium' if p.difficulty == 'Medium' else 'badge-hard') }}">{{ p.difficulty }}</span>
+        </div>
+        <span class="badge bg-primary bg-opacity-10 text-primary-custom mb-1">{{ p.topic }}</span>
+        <span class="badge bg-secondary bg-opacity-10 text-secondary mb-3"><i class="bi {{ lang_info.icon }}"></i> {{ lang_info.label }}</span>
+        <p class="text-muted-custom">{{ p.description }}</p>
+
+        {% if p.judge_type != 'preview' %}
+        <div class="small mb-3" style="background: var(--surface-alt); border-radius: 8px; padding: .6rem .9rem;">
+          <strong>Sample Input:</strong> {{ p.sample_input }}<br>
+          <strong>Sample Output:</strong> {{ p.sample_output }}
+        </div>
+        {% else %}
+        <div class="small mb-3" style="background: var(--surface-alt); border-radius: 8px; padding: .6rem .9rem;">
+          This is an HTML/CSS layout exercise — there's no single "correct" output to auto-grade, so check your
+          work against the description using the live preview on the right.
+        </div>
+        {% endif %}
+
+        <div class="mb-2">
+          <button class="btn btn-outline-cb btn-sm" id="toggleHintsBtn" type="button">
+            <i class="bi bi-lightbulb"></i> Show a hint
+          </button>
+        </div>
+        <div id="hintsContainer" style="display:none;"></div>
+
+        <div class="mt-3">
+          <button class="btn btn-outline-cb btn-sm" id="askAiHelpBtn" type="button">
+            <i class="bi bi-robot"></i> Ask the AI Assistant for a nudge
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Editor -->
+    <div class="col-lg-7">
+      <div class="card-cb p-4 animate-fade-up delay-1">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="fw-bold mb-0"><i class="bi bi-terminal text-primary-custom"></i> {{ lang_info.label }} Editor</h6>
+          <div class="d-flex gap-2">
+            <button class="btn btn-outline-cb btn-sm" id="resetCodeBtn" type="button"><i class="bi bi-arrow-counterclockwise"></i> Reset</button>
+            {% if p.judge_type != 'preview' %}
+            <button class="btn btn-primary-cb btn-sm" id="runCodeBtn" type="button"><i class="bi bi-play-fill"></i> Run Tests</button>
+            {% endif %}
+          </div>
+        </div>
+
+        <textarea id="codeEditor">{{ p.starter_code }}</textarea>
+
+        {% if p.judge_type == 'preview' %}
+        <div class="mt-3">
+          <h6 class="fw-bold small text-muted-custom mb-2"><i class="bi bi-eye"></i> Live Preview</h6>
+          <iframe id="previewFrame" class="preview-frame" sandbox="allow-same-origin"></iframe>
+        </div>
+        {% else %}
+        <div id="runStatus" class="mt-3"></div>
+        <div id="resultsContainer" class="mt-2"></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/clike/clike.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+<script>
+  const STARTER_CODE = {{ p.starter_code | tojson }};
+  const HINTS = {{ (p.hints or '[]') | safe }};
+  const PROBLEM_ID = {{ p.id }};
+  const PROBLEM_TITLE = {{ p.title | tojson }};
+  const PROBLEM_LANGUAGE = {{ (p.language or 'python') | tojson }};
+  const JUDGE_TYPE = {{ p.judge_type | tojson }};
+  const CM_MODE = {{ lang_info.cm_mode | tojson }};
+
+  const editor = CodeMirror.fromTextArea(document.getElementById("codeEditor"), {
+    mode: CM_MODE,
+    theme: "dracula",
+    lineNumbers: true,
+    indentUnit: 4,
+    tabSize: 4,
+    indentWithTabs: false,
+    matchBrackets: true,
+    autoCloseBrackets: true,
+    extraKeys: { "Tab": (cm) => cm.replaceSelection("    ", "end") },
+  });
+
+  document.getElementById("resetCodeBtn").addEventListener("click", () => {
+    editor.setValue(STARTER_CODE);
+  });
+
+  let hintIndex = 0;
+  document.getElementById("toggleHintsBtn").addEventListener("click", () => {
+    const box = document.getElementById("hintsContainer");
+    if (!HINTS.length) { box.innerHTML = "<p class='text-muted-custom small'>No hints available for this problem.</p>"; box.style.display = "block"; return; }
+    if (hintIndex < HINTS.length) {
+      const div = document.createElement("div");
+      div.className = "hint-box small";
+      div.innerHTML = `<strong>Hint ${hintIndex + 1}:</strong> ${HINTS[hintIndex]}`;
+      box.appendChild(div);
+      box.style.display = "block";
+      hintIndex++;
+    }
+    if (hintIndex >= HINTS.length) {
+      document.getElementById("toggleHintsBtn").disabled = true;
+      document.getElementById("toggleHintsBtn").innerHTML = "<i class='bi bi-lightbulb-fill'></i> No more hints";
+    }
+  });
+
+  if (JUDGE_TYPE === "preview") {
+    // HTML/CSS problems: no server round-trip, just render the editor's
+    // content straight into a sandboxed iframe as the learner types.
+    const frame = document.getElementById("previewFrame");
+    let debounceTimer = null;
+    function renderPreview() {
+      frame.srcdoc = editor.getValue();
+    }
+    editor.on("change", () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(renderPreview, 300);
+    });
+    renderPreview();
+  } else {
+    document.getElementById("runCodeBtn").addEventListener("click", () => {
+      const btn = document.getElementById("runCodeBtn");
+      const status = document.getElementById("runStatus");
+      const results = document.getElementById("resultsContainer");
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Running…';
+      status.innerHTML = "";
+      results.innerHTML = "";
+
+      fetch(`/coding-practice/${PROBLEM_ID}/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: editor.getValue() }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (!data.ok) {
+            status.innerHTML = `<div class="alert alert-danger py-2 px-3 mb-0" style="white-space: pre-wrap;">${data.error}</div>`;
+            return;
+          }
+          const passedCount = data.results.filter(r => r.passed).length;
+          const total = data.results.length;
+          if (data.all_passed) {
+            status.innerHTML = `<div class="alert alert-success py-2 px-3 mb-0"><i class="bi bi-check-circle-fill"></i> All ${total} test cases passed! Great work.</div>`;
+          } else {
+            status.innerHTML = `<div class="alert alert-warning py-2 px-3 mb-0"><i class="bi bi-exclamation-circle-fill"></i> ${passedCount}/${total} test cases passed. Keep going!</div>`;
+          }
+          data.results.forEach((r, i) => {
+            const row = document.createElement("div");
+            row.className = "test-case-row " + (r.passed ? "passed" : "failed");
+            row.innerHTML = `
+              <div class="d-flex justify-content-between align-items-center">
+                <strong class="small">Test ${i + 1}</strong>
+                <span class="small ${r.passed ? "text-success" : "text-danger"}">${r.passed ? "✔ Passed" : "✘ Failed"}</span>
+              </div>
+              <div class="small text-muted-custom mt-1">Expected: <code>${JSON.stringify(r.expected)}</code> ${r.passed ? "" : `&nbsp;|&nbsp; Got: <code>${r.error ? "Error — " + r.error : JSON.stringify(r.actual)}</code>`}</div>`;
+            results.appendChild(row);
+          });
+        })
+        .catch(() => {
+          status.innerHTML = `<div class="alert alert-danger py-2 px-3 mb-0">Something went wrong running your code. Please try again.</div>`;
+        })
+        .finally(() => {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="bi bi-play-fill"></i> Run Tests';
+        });
+    });
+  }
+
+  document.getElementById("askAiHelpBtn").addEventListener("click", () => {
+    if (window.CareerBoostAssistant) {
+      window.CareerBoostAssistant.open();
+      window.CareerBoostAssistant.ask(`I'm stuck on the coding problem "${PROBLEM_TITLE}". Can you give me a hint (not the full solution)?`);
+    }
+  });
+</script>
+{% endblock %}

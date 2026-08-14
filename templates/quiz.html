@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Aptitude Quiz — CareerBoost AI{% endblock %}
+{% block content %}
+<div class="container py-4">
+
+  {% if result %}
+  <!-- RESULT VIEW -->
+  <div class="card-cb p-5 text-center mx-auto animate-fade-up" style="max-width: 520px;">
+    <i class="bi bi-trophy fs-1 text-primary-custom mb-3"></i>
+    <h4 class="fw-bold">{{ result.category }} Quiz Complete!</h4>
+    <div class="display-4 fw-bold text-primary-custom my-3">{{ result.score }}/{{ result.total }}</div>
+    <div class="progress-cb mb-4">
+      <div class="progress-bar" style="width: {{ (result.score / result.total * 100) | round(1) }}%;"></div>
+    </div>
+    <div class="d-flex gap-2 justify-content-center">
+      <a href="{{ url_for('quiz.categories') }}" class="btn btn-outline-cb">Back to Categories</a>
+      <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary-cb">View Dashboard</a>
+    </div>
+  </div>
+
+  {% if wrong_answers %}
+  <div class="mx-auto mt-4 animate-fade-up delay-1" style="max-width: 700px;">
+    <h6 class="fw-bold mb-3"><i class="bi bi-x-circle text-danger"></i> Review — questions you missed</h6>
+    {% for w in wrong_answers %}
+    <div class="card-cb p-3 mb-2">
+      <p class="fw-semibold mb-1">{{ w.question }}</p>
+      <p class="small mb-0 text-muted-custom">Your answer: <span class="text-danger fw-semibold">{{ w.selected }}</span> &nbsp;•&nbsp; Correct answer: <span class="text-success fw-semibold">{{ w.correct }}</span></p>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% elif questions %}
+  <!-- QUIZ TAKING VIEW -->
+  <div class="d-flex justify-content-between align-items-center mb-4 animate-fade-up">
+    <h4 class="fw-bold mb-0">{{ category }} Aptitude Quiz <span class="badge {{ 'badge-easy' if active_difficulty == 'Easy' else ('badge-medium' if active_difficulty == 'Medium' else ('badge-hard' if active_difficulty == 'Hard' else 'bg-primary bg-opacity-10 text-primary-custom')) }} ms-2">{{ active_difficulty }}</span></h4>
+    <span class="badge bg-danger fs-6 px-3 py-2"><i class="bi bi-stopwatch"></i> <span id="quizTimer">10:00</span></span>
+  </div>
+
+  <form method="POST" id="quizForm" class="animate-fade-up delay-1">
+    {% for q in questions %}
+    <div class="card-cb p-4 mb-3">
+      <input type="hidden" name="question_id" value="{{ q.id }}">
+      <p class="fw-semibold mb-3">{{ loop.index }}. {{ q.question }}
+        <span class="badge {{ 'badge-easy' if q.difficulty == 'Easy' else ('badge-medium' if q.difficulty == 'Medium' else 'badge-hard') }} ms-2">{{ q.difficulty }}</span>
+      </p>
+      {% for opt_key, opt_val in [('A', q.option_a), ('B', q.option_b), ('C', q.option_c), ('D', q.option_d)] %}
+      <label class="quiz-option d-flex align-items-center gap-2">
+        <input type="radio" name="answer_{{ q.id }}" value="{{ opt_key }}" required>
+        <span class="quiz-option-label">{{ opt_key }}. {{ opt_val }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    {% endfor %}
+    <div class="text-center">
+      <button type="submit" class="btn btn-primary-cb btn-lg px-5">Submit Quiz <i class="bi bi-check-circle ms-1"></i></button>
+    </div>
+  </form>
+
+  {% else %}
+  <!-- CATEGORY SELECTION VIEW -->
+  <div class="mb-4 animate-fade-up">
+    <h3 class="fw-bold">Aptitude Quiz</h3>
+    <p class="text-muted-custom">Choose a category and difficulty to test yourself with 10 randomized questions. 110+ questions available across Easy, Medium and Hard.</p>
+  </div>
+  <div class="row g-4">
+    {% set icons = {'Quantitative': 'bi-calculator', 'Logical': 'bi-diagram-3', 'Verbal': 'bi-chat-square-text', 'Technical': 'bi-cpu'} %}
+    {% for cat in categories %}
+    <div class="col-md-6 col-lg-3">
+      <div class="card-cb p-4 text-center h-100 animate-fade-up">
+        <div class="stat-icon mx-auto mb-3"><i class="bi {{ icons.get(cat.category, 'bi-question-circle') }}"></i></div>
+        <h5 class="fw-bold">{{ cat.category }}</h5>
+        <p class="text-muted-custom mb-3">{{ cat.total }} questions available</p>
+        <div class="d-flex flex-column gap-2">
+          <a href="{{ url_for('quiz.take_quiz', category=cat.category, difficulty='All') }}" class="btn btn-primary-cb btn-sm">Mixed (10)</a>
+          <div class="d-flex gap-1 justify-content-center">
+            <a href="{{ url_for('quiz.take_quiz', category=cat.category, difficulty='Easy') }}" class="btn btn-outline-cb btn-sm flex-fill">Easy</a>
+            <a href="{{ url_for('quiz.take_quiz', category=cat.category, difficulty='Medium') }}" class="btn btn-outline-cb btn-sm flex-fill">Medium</a>
+            <a href="{{ url_for('quiz.take_quiz', category=cat.category, difficulty='Hard') }}" class="btn btn-outline-cb btn-sm flex-fill">Hard</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

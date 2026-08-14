@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}AI Study Assistant — CareerBoost AI{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="mb-4 animate-fade-up">
+    <a href="{{ url_for('ai_coach.hub') }}" class="text-muted-custom small text-decoration-none"><i class="bi bi-arrow-left"></i> AI Career Coach</a>
+    <h3 class="fw-bold mb-1 mt-1"><i class="bi bi-mortarboard text-primary-custom"></i> AI Study Assistant</h3>
+    <p class="text-muted-custom mb-0">Pick any topic, choose how you want it explained.</p>
+  </div>
+
+  {% include 'components/ai_not_configured.html' %}
+
+  <div class="card-cb p-4 mb-4 animate-fade-up">
+    <form id="studyForm" class="row g-3 align-items-end">
+      <div class="col-md-6">
+        <label class="form-label small fw-semibold">Topic</label>
+        <input type="text" class="form-control form-control-cb" name="topic" placeholder="e.g. Binary Search Trees, Normalization, OOP Pillars" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label small fw-semibold">Format</label>
+        <select class="form-select form-select-cb" name="mode">
+          <option value="simple">Simple Explanation</option>
+          <option value="detailed">Detailed Explanation</option>
+          <option value="notes">Short Notes</option>
+          <option value="exam_notes">Exam Notes</option>
+          <option value="important_questions">Important Questions</option>
+          <option value="mcqs">MCQs</option>
+          <option value="flashcards">Flashcards</option>
+          <option value="interview_questions">Interview Questions</option>
+          <option value="coding_examples">Coding Examples</option>
+          <option value="real_world_examples">Real-world Examples</option>
+          <option value="revision_plan">Revision Plan</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary-cb w-100" id="studySubmit" {{ 'disabled' if not gemini_configured }}>
+          <i class="bi bi-magic"></i> Go
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div id="studyResult"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const form = document.getElementById('studyForm');
+  const resultBox = document.getElementById('studyResult');
+  const submitBtn = document.getElementById('studySubmit');
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const payload = Object.fromEntries(new FormData(form).entries());
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    resultBox.innerHTML = '<div class="card-cb p-5 text-center text-muted-custom"><div class="spinner-border text-primary mb-3"></div><div>Preparing your study material…</div></div>';
+
+    fetch('/api/ai/study', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) {
+          const html = (typeof marked !== 'undefined') ? marked.parse(data.content) : data.content;
+          resultBox.innerHTML = `<div class="card-cb p-4 animate-fade-up study-markdown">${html}</div>`;
+        } else {
+          const d = document.createElement('div'); d.textContent = data.error;
+          resultBox.innerHTML = `<div class="alert alert-danger">${d.innerHTML}</div>`;
+        }
+      })
+      .catch(() => { resultBox.innerHTML = '<div class="alert alert-danger">Something went wrong. Please try again.</div>'; })
+      .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="bi bi-magic"></i> Go';
+      });
+  });
+});
+</script>
+<style>
+.study-markdown h1, .study-markdown h2, .study-markdown h3 { color: var(--primary); font-weight: 700; }
+.study-markdown code { background: var(--surface-alt); padding: 0.1rem 0.4rem; border-radius: 4px; }
+.study-markdown pre { background: var(--surface-alt); padding: 1rem; border-radius: 10px; overflow-x: auto; }
+</style>
+{% endblock %}

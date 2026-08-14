@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}AI Career Coach — CareerBoost AI{% endblock %}
+{% block content %}
+<div class="container py-4">
+
+  <div class="mb-4 animate-fade-up">
+    <span class="hero-badge mb-2"><i class="bi bi-stars"></i> Gemini-powered</span>
+    <h3 class="fw-bold mb-1">AI Career Coach</h3>
+    <p class="text-muted-custom mb-0">One AI, every part of your placement prep — pick a tool below.</p>
+  </div>
+
+  {% include 'components/ai_not_configured.html' %}
+
+  <div class="row g-4 mb-4">
+    {% set tools = [
+      ('bi-signpost-split', 'AI Career Roadmap', 'Get a personalized week-by-week plan from where you are to job-ready.', url_for('ai_coach.roadmap_page')),
+      ('bi-search-heart', 'AI Skill Gap Analyzer', 'See exactly which skills you have, which you\'re missing, and in what order to learn them.', url_for('ai_coach.skill_gap_page')),
+      ('bi-file-earmark-check', 'AI Resume Coach', 'Match your resume against a job description and get ATS-ready fixes.', url_for('ai_coach.resume_match_page')),
+      ('bi-chat-square-text', 'AI Mock Interview Coach', 'Live Q&A practice — technical, HR or behavioral — with per-answer scoring.', url_for('ai_coach.interview_coach_page')),
+      ('bi-mortarboard', 'AI Study Assistant', 'Explanations, notes, MCQs, flashcards or a revision plan on any topic.', url_for('ai_coach.study_page')),
+      ('bi-patch-question', 'AI Quiz Generator', 'Generate a fresh MCQ quiz on any subject and difficulty, on demand.', url_for('ai_coach.quiz_generator_page')),
+      ('bi-building-gear', 'AI Company Preparation', 'A structured 7-day prep strategy for a specific company or role.', url_for('ai_coach.company_prep_page')),
+      ('bi-people', 'AI Group Discussion Coach', 'Practice live GDs against AI participants with different viewpoints, then get scored.', url_for('gd.home')),
+    ] %}
+    {% for icon, title, desc, link in tools %}
+    <div class="col-md-6 col-lg-3">
+      <a href="{{ link }}" class="text-decoration-none">
+        <div class="card-cb p-4 h-100 animate-fade-up">
+          <div class="stat-icon mb-3"><i class="bi {{ icon }}"></i></div>
+          <h6 class="fw-bold text-body mb-2">{{ title }}</h6>
+          <p class="text-muted-custom small mb-0">{{ desc }}</p>
+        </div>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="card-cb p-4 animate-fade-up">
+        <h6 class="fw-bold mb-3"><i class="bi bi-clock-history me-1"></i> Latest Roadmap</h6>
+        {% if recent_roadmap %}
+          <p class="mb-1"><strong>Target role:</strong> {{ recent_roadmap.target_role }}</p>
+          <p class="text-muted-custom small mb-3">Generated {{ recent_roadmap.created_at[:10] }}</p>
+          <a href="{{ url_for('ai_coach.roadmap_page') }}" class="btn btn-outline-cb btn-sm">View / regenerate</a>
+        {% else %}
+          <p class="text-muted-custom mb-3">You haven't generated a career roadmap yet.</p>
+          <a href="{{ url_for('ai_coach.roadmap_page') }}" class="btn btn-primary-cb btn-sm">Generate my roadmap</a>
+        {% endif %}
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card-cb p-4 animate-fade-up delay-1">
+        <h6 class="fw-bold mb-3"><i class="bi bi-bar-chart-line me-1"></i> Latest Skill Gap Report</h6>
+        {% if recent_skill_gap %}
+          <p class="mb-1"><strong>Target role:</strong> {{ recent_skill_gap.target_role }}</p>
+          <p class="text-muted-custom small mb-3">Readiness: {{ recent_skill_gap.readiness_percent or '—' }}%</p>
+          <a href="{{ url_for('ai_coach.skill_gap_page') }}" class="btn btn-outline-cb btn-sm">View / re-analyze</a>
+        {% else %}
+          <p class="text-muted-custom mb-3">You haven't run a skill gap analysis yet.</p>
+          <a href="{{ url_for('ai_coach.skill_gap_page') }}" class="btn btn-primary-cb btn-sm">Analyze my skills</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+Flask==3.0.3
+Werkzeug==3.0.3
+reportlab==4.2.2
+requests==2.32.3
+python-dotenv==1.0.1
+gunicorn==22.0.0
+
+# requests (above) is used by utils/gemini_service.py to call the Gemini
+# REST API directly - no separate Google SDK needed. Set a GEMINI_API_KEY
+# environment variable to enable every AI feature (Career Coach, Resume
+# Coach, Interview Coach, Coding Assistant, Study Assistant, Group
+# Discussion simulator, AI Quiz Generator, ...). Without it, AI pages show
+# a clear "not configured" notice and the rest of the app works normally.
+#
+# python-dotenv loads a local .env file during development (see app.py).
+# gunicorn is the production WSGI server used to run the app on a cloud
+# platform (see Procfile) - it is not used by `python app.py` locally.

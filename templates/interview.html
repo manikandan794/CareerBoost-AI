@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Interview Questions — CareerBoost AI{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="mb-4 animate-fade-up">
+    <h3 class="fw-bold">Technical Interview Questions</h3>
+    <p class="text-muted-custom">{{ total_count }} curated questions with model answers, across categories and difficulty levels.</p>
+  </div>
+
+  <div class="d-flex flex-wrap gap-2 mb-3 animate-fade-up delay-1">
+    <a href="{{ url_for('interview.index', category='All', difficulty=active_difficulty) }}" class="btn btn-sm {{ 'btn-primary-cb' if active_category == 'All' else 'btn-outline-cb' }}">All Topics</a>
+    {% for c in categories %}
+    <a href="{{ url_for('interview.index', category=c, difficulty=active_difficulty) }}" class="btn btn-sm {{ 'btn-primary-cb' if active_category == c else 'btn-outline-cb' }}">{{ c }}</a>
+    {% endfor %}
+  </div>
+  <div class="d-flex flex-wrap gap-2 mb-4 animate-fade-up delay-1">
+    {% for d in ['All', 'Easy', 'Medium', 'Hard'] %}
+    <a href="{{ url_for('interview.index', category=active_category, difficulty=d) }}" class="btn btn-sm {{ 'btn-primary-cb' if active_difficulty == d else 'btn-outline-cb' }}">{{ d }}</a>
+    {% endfor %}
+  </div>
+
+  <div class="accordion animate-fade-up delay-2" id="interviewAccordion">
+    {% for q in questions %}
+    <div class="card-cb mb-3 overflow-hidden">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#q{{ q.id }}"
+                style="background: var(--surface); color: var(--text);">
+          <span class="badge bg-primary bg-opacity-10 text-primary-custom me-2">{{ q.category }}</span>
+          <span class="badge {{ 'badge-easy' if q.difficulty == 'Easy' else ('badge-medium' if q.difficulty == 'Medium' else 'badge-hard') }} me-3">{{ q.difficulty }}</span>
+          {{ q.question }}
+        </button>
+      </h2>
+      <div id="q{{ q.id }}" class="accordion-collapse collapse" data-bs-parent="#interviewAccordion">
+        <div class="accordion-body text-muted-custom">
+          {{ q.answer }}
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <p class="text-muted-custom">No questions found for this filter.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

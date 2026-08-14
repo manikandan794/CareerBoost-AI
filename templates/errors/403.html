@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Access Denied — CareerBoost AI{% endblock %}
+{% block content %}
+<div class="container py-5 text-center">
+  <i class="bi bi-shield-lock fs-1 text-primary-custom mb-3 d-block"></i>
+  <h1 class="fw-bold display-4">403</h1>
+  <p class="text-muted-custom fs-5">You don't have permission to access this page.</p>
+  <a href="{{ url_for('main.home') }}" class="btn btn-primary-cb mt-3">Back to Home</a>
+</div>
+{% endblock %}

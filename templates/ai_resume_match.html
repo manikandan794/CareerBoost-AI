@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}AI Resume Coach — CareerBoost AI{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="mb-4 animate-fade-up">
+    <a href="{{ url_for('ai_coach.hub') }}" class="text-muted-custom small text-decoration-none"><i class="bi bi-arrow-left"></i> AI Career Coach</a>
+    <h3 class="fw-bold mb-1 mt-1"><i class="bi bi-file-earmark-check text-primary-custom"></i> AI Resume ↔ Job Description Matcher</h3>
+    <p class="text-muted-custom mb-0">Paste your resume and a job description to get a match score and ATS fixes.</p>
+  </div>
+
+  {% include 'components/ai_not_configured.html' %}
+
+  <div class="row g-4">
+    <div class="col-lg-5">
+      <div class="card-cb p-4 animate-fade-up">
+        <form id="matchForm">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Your resume text</label>
+            <textarea class="form-control form-control-cb" name="resume_text" rows="8" placeholder="Paste your resume content here…" required></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Job description</label>
+            <textarea class="form-control form-control-cb" name="job_description" rows="8" placeholder="Paste the target job description here…" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary-cb w-100" id="matchSubmit" {{ 'disabled' if not gemini_configured }}>
+            <i class="bi bi-magic"></i> Analyze Match
+          </button>
+        </form>
+      </div>
+    </div>
+    <div class="col-lg-7">
+      <div id="matchResult"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const form = document.getElementById('matchForm');
+  const resultBox = document.getElementById('matchResult');
+  const submitBtn = document.getElementById('matchSubmit');
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+  function listItems(arr) { return (arr || []).map(i => `<li>${esc(i)}</li>`).join(''); }
+
+  function renderMatch(m) {
+    const pct = Math.max(0, Math.min(100, m.match_score || 0));
+    resultBox.innerHTML = `
+      <div class="card-cb p-4 mb-3 animate-fade-up d-flex flex-row align-items-center gap-4 flex-wrap">
+        <div class="ats-score-ring" style="background: conic-gradient(var(--accent) ${pct * 3.6}deg, var(--surface-alt) 0deg);">
+          <span style="background:var(--surface); width:70px;height:70px;border-radius:50%;display:flex;align-items:center;justify-content:center;">${pct}%</span>
+        </div>
+        <div><h6 class="fw-bold mb-1">Match Score</h6><p class="text-muted-custom small mb-0">How well your resume aligns with this job description.</p></div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <div class="card-cb p-3 h-100">
+            <h6 class="fw-bold small text-success">Matching Skills</h6>
+            <ul class="small mb-0">${listItems(m.matching_skills)}</ul>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card-cb p-3 h-100">
+            <h6 class="fw-bold small text-danger">Missing Skills</h6>
+            <ul class="small mb-0">${listItems(m.missing_skills)}</ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-cb p-3 mb-3">
+        <h6 class="fw-bold small">Important Keywords</h6>
+        <div class="d-flex flex-wrap gap-2">${(m.important_keywords || []).map(k => `<span class="badge text-bg-light border">${esc(k)}</span>`).join('')}</div>
+      </div>
+
+      <div class="card-cb p-3 mb-3">
+        <h6 class="fw-bold small">Relevant Projects Feedback</h6>
+        <p class="small mb-0">${esc(m.relevant_projects_feedback)}</p>
+      </div>
+      <div class="card-cb p-3 mb-3">
+        <h6 class="fw-bold small">Experience Alignment</h6>
+        <p class="small mb-0">${esc(m.experience_alignment)}</p>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="card-cb p-3 h-100">
+            <h6 class="fw-bold small">ATS Improvement Suggestions</h6>
+            <ul class="small mb-0">${listItems(m.ats_suggestions)}</ul>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card-cb p-3 h-100">
+            <h6 class="fw-bold small">Interview Prep Suggestions</h6>
+            <ul class="small mb-0">${listItems(m.interview_prep_suggestions)}</ul>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const payload = Object.fromEntries(new FormData(form).entries());
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Analyzing…';
+    resultBox.innerHTML = '<div class="card-cb p-5 text-center text-muted-custom"><div class="spinner-border text-primary mb-3"></div><div>Comparing resume to job description…</div></div>';
+
+    fetch('/api/ai/resume-match', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) { renderMatch(data.match); }
+        else { resultBox.innerHTML = `<div class="alert alert-danger">${esc(data.error)}</div>`; }
+      })
+      .catch(() => { resultBox.innerHTML = '<div class="alert alert-danger">Something went wrong. Please try again.</div>'; })
+      .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="bi bi-magic"></i> Analyze Match';
+      });
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}GD Topics — CareerBoost AI{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="mb-4 animate-fade-up">
+    <a href="{{ url_for('gd.home') }}" class="text-muted-custom small text-decoration-none"><i class="bi bi-arrow-left"></i> Group Discussion</a>
+    <h3 class="fw-bold mb-1 mt-1"><i class="bi bi-people text-primary-custom"></i> Choose a Discussion Topic</h3>
+    <p class="text-muted-custom mb-0">Pick a topic below, or enter your own, then configure your practice session.</p>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="d-flex flex-wrap gap-2 mb-3 animate-fade-up">
+        <a href="{{ url_for('gd.topics') }}" class="btn btn-sm {{ 'btn-primary-cb' if not selected_category else 'btn-outline-cb' }}">All</a>
+        {% for c in all_categories %}
+        <a href="{{ url_for('gd.topics', category=c) }}" class="btn btn-sm {{ 'btn-primary-cb' if selected_category == c else 'btn-outline-cb' }}">{{ c }}</a>
+        {% endfor %}
+      </div>
+
+      <div class="row g-3">
+        {% for t in topics %}
+        <div class="col-md-6">
+          <div class="card-cb p-3 h-100 animate-fade-up gd-topic-card" data-topic-id="{{ t.id }}" data-topic-title="{{ t.title }}" data-topic-difficulty="{{ t.difficulty }}">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <span class="badge text-bg-light border">{{ t.category }}</span>
+              <span class="badge badge-{{ 'easy' if t.difficulty == 'Easy' else 'medium' if t.difficulty == 'Medium' else 'hard' }}">{{ t.difficulty }}</span>
+            </div>
+            <h6 class="fw-bold mb-1">{{ t.title }}</h6>
+            <p class="small text-muted-custom mb-2">{{ t.description }}</p>
+            <button type="button" class="btn btn-outline-cb btn-sm select-topic-btn">Select this topic</button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card-cb p-4 animate-fade-up sticky-top" style="top: 90px;">
+        <h6 class="fw-bold mb-3">Session Setup</h6>
+        <form id="startForm" method="POST" action="{{ url_for('gd.start') }}">
+          <input type="hidden" name="topic_id" id="topicIdInput">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Selected topic</label>
+            <input type="text" class="form-control form-control-cb" name="custom_topic" id="topicTitleInput" placeholder="Select a topic, or type your own">
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Difficulty</label>
+            <select class="form-select form-select-cb" name="difficulty" id="difficultySelect">
+              <option>Easy</option><option selected>Medium</option><option>Hard</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Number of AI participants</label>
+            <select class="form-select form-select-cb" name="participant_count">
+              <option value="2">2</option><option value="3" selected>3</option><option value="4">4</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Time limit (minutes)</label>
+            <select class="form-select form-select-cb" name="time_limit">
+              <option value="5">5</option><option value="10" selected>10</option><option value="15">15</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary-cb w-100"><i class="bi bi-play-fill"></i> Start Discussion</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.select-topic-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      const card = this.closest('.gd-topic-card');
+      document.getElementById('topicIdInput').value = card.dataset.topicId;
+      document.getElementById('topicTitleInput').value = card.dataset.topicTitle;
+      document.getElementById('difficultySelect').value = card.dataset.topicDifficulty;
+      document.querySelectorAll('.gd-topic-card').forEach(c => c.classList.remove('resume-template-option', 'selected'));
+      card.classList.add('resume-template-option', 'selected');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+  document.getElementById('topicTitleInput').addEventListener('input', function () {
+    document.getElementById('topicIdInput').value = '';
+  });
+});
+</script>
+{% endblock %}

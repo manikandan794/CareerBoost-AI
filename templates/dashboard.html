@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — CareerBoost AI{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4 animate-fade-up">
+    <div>
+      <h3 class="fw-bold mb-0">Welcome back, {{ session.get('full_name', 'Student').split(' ')[0] }} 👋</h3>
+      <p class="text-muted-custom mb-0">Here's an overview of your placement preparation progress.</p>
+    </div>
+    <a href="{{ url_for('quiz.categories') }}" class="btn btn-primary-cb"><i class="bi bi-play-fill"></i> Take a Quiz</a>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="row g-3 mb-4">
+    {% set quick_actions = [
+      ('bi-robot', 'AI Career Coach', url_for('ai_coach.hub')),
+      ('bi-file-earmark-person', 'Build Resume', url_for('resume.builder')),
+      ('bi-code-slash', 'Practice Coding', url_for('coding.index')),
+      ('bi-chat-square-text', 'Mock Interview', url_for('ai_coach.interview_coach_page')),
+      ('bi-people', 'Practice GD', url_for('gd.home')),
+      ('bi-patch-check', 'Aptitude Quiz', url_for('quiz.categories')),
+    ] %}
+    {% for icon, label, link in quick_actions %}
+    <div class="col-6 col-md-4 col-lg-2">
+      <a href="{{ link }}" class="text-decoration-none">
+        <div class="card-cb p-3 text-center h-100 animate-fade-up">
+          <i class="bi {{ icon }} fs-4 text-primary-custom d-block mb-1"></i>
+          <span class="small fw-semibold text-body">{{ label }}</span>
+        </div>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Stat cards -->
+  <div class="row g-4 mb-4">
+    <div class="col-md-4">
+      <div class="stat-card d-flex align-items-center gap-3 animate-fade-up delay-1">
+        <div class="stat-icon"><i class="bi bi-patch-check"></i></div>
+        <div>
+          <h4 class="fw-bold mb-0">{{ total_quizzes }}</h4>
+          <span class="text-muted-custom">Quizzes Attempted</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="stat-card d-flex align-items-center gap-3 animate-fade-up delay-2">
+        <div class="stat-icon"><i class="bi bi-graph-up-arrow"></i></div>
+        <div>
+          <h4 class="fw-bold mb-0">{{ avg_score }}%</h4>
+          <span class="text-muted-custom">Average Score</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="stat-card d-flex align-items-center gap-3 animate-fade-up delay-3">
+        <div class="stat-icon"><i class="bi bi-file-earmark-person"></i></div>
+        <div>
+          <h4 class="fw-bold mb-0">{{ resume_count }}</h4>
+          <span class="text-muted-custom">Resumes Created</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="row g-4 mb-4">
+    <div class="col-lg-6">
+      <div class="card-cb p-4 animate-fade-up">
+        <h5 class="fw-bold mb-3">Score by Category</h5>
+        <canvas id="categoryChart" height="220"></canvas>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card-cb p-4 animate-fade-up delay-1">
+        <h5 class="fw-bold mb-3">Progress Trend</h5>
+        <canvas id="trendChart" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent results -->
+  <div class="card-cb p-4 animate-fade-up delay-2">
+    <h5 class="fw-bold mb-3">Recent Quiz Attempts</h5>
+    {% if quiz_results %}
+    <div class="table-responsive">
+      <table class="table table-cb align-middle mb-0">
+        <thead><tr><th>Category</th><th>Score</th><th>Percentage</th><th>Date</th></tr></thead>
+        <tbody>
+          {% for r in quiz_results %}
+          <tr>
+            <td>{{ r.category }}</td>
+            <td>{{ r.score }} / {{ r.total }}</td>
+            <td>
+              <div class="progress-cb" style="width:120px;">
+                <div class="progress-bar" style="width: {{ (r.score / r.total * 100) | round(1) }}%;"></div>
+              </div>
+            </td>
+            <td>{{ r.taken_at[:16] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-muted-custom mb-0">You haven't attempted any quizzes yet. <a href="{{ url_for('quiz.categories') }}">Start one now</a>.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  fetch("{{ url_for('dashboard.chart_data') }}")
+    .then(res => res.json())
+    .then(data => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const gridColor = isDark ? '#2A2F3E' : '#E5E7EB';
+      const textColor = isDark ? '#9CA3AF' : '#6B7280';
+
+      new Chart(document.getElementById('categoryChart'), {
+        type: 'bar',
+        data: {
+          labels: data.categories,
+          datasets: [{
+            label: 'Average Score (%)',
+            data: data.scores,
+            backgroundColor: ['#0D9488', '#F97316', '#16A34A'],
+            borderRadius: 8,
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, max: 100, grid: { color: gridColor }, ticks: { color: textColor } },
+            x: { grid: { display: false }, ticks: { color: textColor } }
+          }
+        }
+      });
+
+      new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: {
+          labels: data.trend_labels.length ? data.trend_labels : ['No data'],
+          datasets: [{
+            label: 'Score %',
+            data: data.trend_scores.length ? data.trend_scores : [0],
+            borderColor: '#0D9488',
+            backgroundColor: 'rgba(13,148,136,0.15)',
+            tension: 0.35,
+            fill: true,
+            pointBackgroundColor: '#0D9488',
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, max: 100, grid: { color: gridColor }, ticks: { color: textColor } },
+            x: { grid: { display: false }, ticks: { color: textColor } }
+          }
+        }
+      });
+    });
+</script>
+{% endblock %}

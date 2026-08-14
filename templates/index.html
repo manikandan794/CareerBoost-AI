@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}CareerBoost AI — Ace Your Placements{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<section class="hero-section">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-6">
+        <span class="hero-badge animate-fade-up"><i class="bi bi-stars"></i> Your placement journey starts here</span>
+        <h1 class="section-title display-5 mt-3 animate-fade-up delay-1">
+          Land your dream job with <span class="text-primary-custom">CareerBoost AI</span>
+        </h1>
+        <p class="section-subtitle fs-5 mt-3 animate-fade-up delay-2">
+          One platform for resume building, aptitude practice, technical interviews, coding challenges, and company insights — everything a placement-ready student needs.
+        </p>
+        <div class="d-flex flex-wrap gap-3 mt-4 animate-fade-up delay-3">
+          {% if logged_in %}
+          <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary-cb btn-lg"><i class="bi bi-speedometer2 me-1"></i> Go to Dashboard</a>
+          {% else %}
+          <a href="{{ url_for('auth.signup') }}" class="btn btn-primary-cb btn-lg"><i class="bi bi-rocket-takeoff me-1"></i> Get Started Free</a>
+          <a href="{{ url_for('auth.login') }}" class="btn btn-outline-cb btn-lg">Login</a>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-lg-6 text-center animate-fade-up delay-2">
+        <div class="float-anim">
+          <i class="bi bi-mortarboard-fill" style="font-size: 14rem; color: var(--primary); opacity:0.15;"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="row g-4 mt-5">
+      <div class="col-6 col-lg-3">
+        <div class="stat-card text-center reveal-on-scroll">
+          <h2 class="fw-bold text-primary-custom mb-0">{{ stats.students }}+</h2>
+          <p class="text-muted-custom mb-0">Students Registered</p>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="stat-card text-center reveal-on-scroll">
+          <h2 class="fw-bold text-primary-custom mb-0">{{ stats.companies }}+</h2>
+          <p class="text-muted-custom mb-0">Hiring Companies</p>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="stat-card text-center reveal-on-scroll">
+          <h2 class="fw-bold text-primary-custom mb-0">{{ stats.questions }}+</h2>
+          <p class="text-muted-custom mb-0">Practice Questions</p>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="stat-card text-center reveal-on-scroll">
+          <h2 class="fw-bold text-primary-custom mb-0">{{ stats.problems }}+</h2>
+          <p class="text-muted-custom mb-0">Coding Problems</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="py-5">
+  <div class="container">
+    <div class="text-center mb-5 reveal-on-scroll">
+      <h2 class="section-title">Everything you need, in one place</h2>
+      <p class="section-subtitle">Built for students preparing for campus placements and beyond.</p>
+    </div>
+    <div class="row g-4">
+      {% set features = [
+        ('bi-file-earmark-person', 'Resume Builder', 'Create an ATS-friendly resume in minutes and export it as a polished PDF.', 'resume.builder'),
+        ('bi-search-heart', 'Resume Analyzer', 'Get instant feedback on keyword match, structure and formatting.', 'resume.analyzer'),
+        ('bi-calculator', 'Aptitude Quiz', 'Practice quantitative, logical and verbal questions with instant scoring.', 'quiz.categories'),
+        ('bi-chat-square-text', 'Interview Questions', 'Browse curated technical and HR interview questions with model answers.', 'interview.index'),
+        ('bi-code-slash', 'Coding Practice', 'Sharpen your DSA skills with hand-picked coding problems by topic.', 'coding.index'),
+        ('bi-building', 'Company Insights', 'Explore hiring companies, roles, packages and eligibility criteria.', 'companies.index'),
+      ] %}
+      {% for icon, title, desc, endpoint in features %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card-cb p-4 h-100 reveal-on-scroll">
+          <div class="stat-icon mb-3"><i class="bi {{ icon }}"></i></div>
+          <h5 class="fw-bold">{{ title }}</h5>
+          <p class="text-muted-custom">{{ desc }}</p>
+          <a href="{{ url_for(endpoint) if logged_in else url_for('auth.login') }}" class="btn btn-outline-cb btn-sm mt-2">Explore <i class="bi bi-arrow-right"></i></a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+{% if not logged_in %}
+<section class="py-5">
+  <div class="container">
+    <div class="card-cb p-5 text-center reveal-on-scroll" style="background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: #fff; border:none;">
+      <h2 class="fw-bold">Ready to boost your career?</h2>
+      <p class="fs-5 mb-4" style="opacity:0.9;">Join CareerBoost AI today — it's free to get started.</p>
+      <a href="{{ url_for('auth.signup') }}" class="btn btn-light btn-lg fw-bold px-4">Create Free Account</a>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}About Us — CareerBoost AI{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="text-center mb-5 animate-fade-up">
+    <span class="hero-badge"><i class="bi bi-info-circle"></i> About CareerBoost AI</span>
+    <h2 class="fw-bold mt-3">Helping students place with confidence</h2>
+    <p class="text-muted-custom fs-5 mx-auto" style="max-width: 720px;">
+      CareerBoost AI is a placement preparation platform built to bring every tool a student needs —
+      resume building, aptitude practice, interview prep, coding challenges, and company research — into one clean, focused workspace.
+    </p>
+  </div>
+
+  <div class="row g-4 mb-5">
+    <div class="col-md-4">
+      <div class="card-cb p-4 text-center h-100 animate-fade-up delay-1">
+        <i class="bi bi-bullseye fs-1 text-primary-custom mb-3"></i>
+        <h5 class="fw-bold">Our Mission</h5>
+        <p class="text-muted-custom mb-0">Make high-quality placement preparation accessible to every student, regardless of college or background.</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card-cb p-4 text-center h-100 animate-fade-up delay-2">
+        <i class="bi bi-eye fs-1 text-primary-custom mb-3"></i>
+        <h5 class="fw-bold">Our Vision</h5>
+        <p class="text-muted-custom mb-0">A world where preparing for placements is structured, measurable, and genuinely engaging.</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card-cb p-4 text-center h-100 animate-fade-up delay-3">
+        <i class="bi bi-heart fs-1 text-primary-custom mb-3"></i>
+        <h5 class="fw-bold">Our Values</h5>
+        <p class="text-muted-custom mb-0">Clarity, consistency, and genuinely useful feedback over vanity features.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-cb p-5 text-center animate-fade-up" style="background: linear-gradient(135deg, var(--primary), var(--primary-light)); color:#fff; border:none;">
+    <h4 class="fw-bold">Built by students, for students</h4>
+    <p class="mb-4" style="opacity:0.9;">CareerBoost AI started as a simple idea: placement prep shouldn't be scattered across ten different tabs.</p>
+    <a href="{{ url_for('auth.signup') if not logged_in else url_for('dashboard.index') }}" class="btn btn-light fw-bold px-4">
+      {{ 'Get Started' if not logged_in else 'Go to Dashboard' }}
+    </a>
+  </div>
+</div>
+{% endblock %}

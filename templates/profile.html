@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}My Profile — CareerBoost AI{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="card-cb p-4 text-center animate-fade-up">
+        <div class="mx-auto mb-3 d-flex align-items-center justify-content-center"
+             style="width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;font-size:2rem;font-weight:700;">
+          {{ user.full_name[:1] | upper }}
+        </div>
+        <h5 class="fw-bold mb-0">{{ user.full_name }}</h5>
+        <p class="text-muted-custom">{{ user.email }}</p>
+        <hr>
+        <div class="d-flex justify-content-around">
+          <div>
+            <h5 class="fw-bold text-primary-custom mb-0">{{ quiz_count }}</h5>
+            <small class="text-muted-custom">Quizzes</small>
+          </div>
+          <div>
+            <h5 class="fw-bold text-primary-custom mb-0">{{ resumes|length }}</h5>
+            <small class="text-muted-custom">Resumes</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-cb p-4 mt-4 animate-fade-up delay-1">
+        <h6 class="fw-bold mb-1"><i class="bi bi-camera-fill text-primary-custom"></i> Face Unlock</h6>
+        <p class="small text-muted-custom mb-3">
+          Optional: sign in faster next time with your webcam instead of a password.
+          This never replaces your password — it's a convenience extra, and it isn't a hardened
+          biometric security system (no liveness check, e.g. a clear photo could potentially fool it).
+        </p>
+        <div id="faceStatusBadge" class="mb-2">
+          {% if user.face_descriptor %}
+          <span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-check-circle-fill"></i> Enrolled</span>
+          {% else %}
+          <span class="badge bg-secondary bg-opacity-10 text-secondary">Not set up</span>
+          {% endif %}
+        </div>
+        <div id="faceEnrollCameraWrap" style="display:none;" class="text-center mb-2">
+          <video id="faceEnrollVideo" width="260" height="195" autoplay muted playsinline class="rounded border"></video>
+        </div>
+        <div id="faceEnrollStatus" class="small mb-2"></div>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-outline-cb btn-sm" id="faceEnrollBtn">
+            <i class="bi bi-camera"></i> {{ 'Re-enroll Face' if user.face_descriptor else 'Set Up Face Unlock' }}
+          </button>
+          {% if user.face_descriptor %}
+          <button type="button" class="btn btn-outline-cb btn-sm text-danger" id="faceRemoveBtn">
+            <i class="bi bi-x-circle"></i> Remove
+          </button>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if resumes %}
+      <div class="card-cb p-4 mt-4 animate-fade-up delay-1">
+        <h6 class="fw-bold mb-3">Recent Resumes</h6>
+        {% for r in resumes %}
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="small">{{ r.template | capitalize }} — {{ r.created_at[:10] }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="col-lg-8">
+      <div class="card-cb p-4 animate-fade-up delay-1">
+        <h5 class="fw-bold mb-3">Edit Profile</h5>
+        <form method="POST" action="{{ url_for('profile.index') }}">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Full Name</label>
+              <input type="text" name="full_name" class="form-control form-control-cb" value="{{ user.full_name }}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              <input type="email" class="form-control form-control-cb" value="{{ user.email }}" disabled>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Phone</label>
+              <input type="text" name="phone" class="form-control form-control-cb" value="{{ user.phone or '' }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">College</label>
+              <input type="text" name="college" class="form-control form-control-cb" value="{{ user.college or '' }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Branch</label>
+              <input type="text" name="branch" class="form-control form-control-cb" value="{{ user.branch or '' }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Graduation Year</label>
+              <input type="text" name="graduation_year" class="form-control form-control-cb" value="{{ user.graduation_year or '' }}">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Bio</label>
+              <textarea name="bio" rows="3" class="form-control form-control-cb">{{ user.bio or '' }}</textarea>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary-cb mt-4"><i class="bi bi-check-circle me-1"></i> Save Changes</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/face_auth.js') }}"></script>
+<script>
+(function () {
+  const enrollBtn = document.getElementById("faceEnrollBtn");
+  const removeBtn = document.getElementById("faceRemoveBtn");
+  const cameraWrap = document.getElementById("faceEnrollCameraWrap");
+  const video = document.getElementById("faceEnrollVideo");
+  const status = document.getElementById("faceEnrollStatus");
+  const badge = document.getElementById("faceStatusBadge");
+
+  let stream = null;
+  let cameraStarted = false;
+
+  enrollBtn.addEventListener("click", async () => {
+    enrollBtn.disabled = true;
+
+    if (!cameraStarted) {
+      status.innerHTML = "Loading face recognition… (first time may take a few seconds)";
+      try {
+        await window.CareerBoostFaceAuth.ensureReady();
+        cameraWrap.style.display = "block";
+        stream = await window.CareerBoostFaceAuth.startCamera(video);
+        cameraStarted = true;
+        status.innerHTML = "Look directly at the camera in good lighting, then click again to capture.";
+        enrollBtn.innerHTML = '<i class="bi bi-camera"></i> Capture Now';
+        enrollBtn.disabled = false;
+      } catch (e) {
+        status.innerHTML = '<span class="text-danger">Couldn\'t access the camera or load face recognition. Please allow camera access and try again.</span>';
+        enrollBtn.disabled = false;
+      }
+      return;
+    }
+
+    status.innerHTML = "Capturing…";
+    try {
+      const descriptor = await window.CareerBoostFaceAuth.captureDescriptor(video);
+      if (!descriptor) {
+        status.innerHTML = '<span class="text-danger">No face detected — face the camera directly with good lighting, then try again.</span>';
+        enrollBtn.disabled = false;
+        return;
+      }
+      const res = await fetch("{{ url_for('profile.face_enroll') }}", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ descriptor }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        status.innerHTML = '<span class="text-success">Face Unlock is set up! You can use it next time you log in.</span>';
+        badge.innerHTML = '<span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-check-circle-fill"></i> Enrolled</span>';
+        window.CareerBoostFaceAuth.stopCamera(stream);
+      } else {
+        status.innerHTML = `<span class="text-danger">${data.error || "Couldn't save your face data."}</span>`;
+      }
+    } catch (e) {
+      status.innerHTML = '<span class="text-danger">Something went wrong. Please try again.</span>';
+    } finally {
+      enrollBtn.disabled = false;
+    }
+  });
+
+  if (removeBtn) {
+    removeBtn.addEventListener("click", async () => {
+      if (!confirm("Remove Face Unlock from your account?")) return;
+      removeBtn.disabled = true;
+      const res = await fetch("{{ url_for('profile.face_remove') }}", { method: "POST" });
+      const data = await res.json();
+      if (data.ok) {
+        location.reload();
+      } else {
+        removeBtn.disabled = false;
+      }
+    });
+  }
+})();
+</script>
+{% endblock %}

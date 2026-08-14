@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}AI Company Preparation — CareerBoost AI{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="mb-4 animate-fade-up">
+    <a href="{{ url_for('ai_coach.hub') }}" class="text-muted-custom small text-decoration-none"><i class="bi bi-arrow-left"></i> AI Career Coach</a>
+    <h3 class="fw-bold mb-1 mt-1"><i class="bi bi-building-gear text-primary-custom"></i> AI Company Preparation</h3>
+    <p class="text-muted-custom mb-0">A structured prep strategy for a company or role — general guidance, not verified live company data.</p>
+  </div>
+
+  {% include 'components/ai_not_configured.html' %}
+
+  <div class="card-cb p-4 mb-4 animate-fade-up">
+    <form id="prepForm" class="row g-3 align-items-end">
+      <div class="col-md-5">
+        <label class="form-label small fw-semibold">Company</label>
+        <input type="text" class="form-control form-control-cb" name="company_name" list="companyList" placeholder="e.g. TCS, Zoho, Amazon" required>
+        <datalist id="companyList">
+          {% for c in companies %}<option value="{{ c.name }}">{% endfor %}
+        </datalist>
+      </div>
+      <div class="col-md-5">
+        <label class="form-label small fw-semibold">Target role <span class="text-muted-custom">(optional)</span></label>
+        <input type="text" class="form-control form-control-cb" name="target_role" placeholder="e.g. Software Engineer Trainee">
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary-cb w-100" id="prepSubmit" {{ 'disabled' if not gemini_configured }}>
+          <i class="bi bi-magic"></i> Prep
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div id="prepResult"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const form = document.getElementById('prepForm');
+  const resultBox = document.getElementById('prepResult');
+  const submitBtn = document.getElementById('prepSubmit');
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+  function listItems(arr) { return (arr || []).map(i => `<li>${esc(i)}</li>`).join(''); }
+
+  function renderPrep(p) {
+    resultBox.innerHTML = `
+      <div class="alert alert-info small animate-fade-up"><i class="bi bi-info-circle me-1"></i> ${esc(p.disclaimer)}</div>
+      <div class="card-cb p-4 mb-3">
+        <h6 class="fw-bold small">Company Overview</h6>
+        <p class="small mb-0">${esc(p.company_overview)}</p>
+      </div>
+      <div class="card-cb p-3 mb-3">
+        <h6 class="fw-bold small">Expected Skills</h6>
+        <div class="d-flex flex-wrap gap-2">${(p.expected_skills || []).map(s => `<span class="badge text-bg-light border">${esc(s)}</span>`).join('')}</div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-4"><div class="card-cb p-3 h-100"><h6 class="fw-bold small">Technical Prep</h6><ul class="small mb-0">${listItems(p.technical_preparation)}</ul></div></div>
+        <div class="col-md-4"><div class="card-cb p-3 h-100"><h6 class="fw-bold small">Aptitude Prep</h6><ul class="small mb-0">${listItems(p.aptitude_preparation)}</ul></div></div>
+        <div class="col-md-4"><div class="card-cb p-3 h-100"><h6 class="fw-bold small">Coding Prep</h6><ul class="small mb-0">${listItems(p.coding_preparation)}</ul></div></div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-6"><div class="card-cb p-3 h-100"><h6 class="fw-bold small">HR Prep</h6><ul class="small mb-0">${listItems(p.hr_preparation)}</ul></div></div>
+        <div class="col-md-6"><div class="card-cb p-3 h-100"><h6 class="fw-bold small">Frequently Expected Topics</h6><ul class="small mb-0">${listItems(p.frequently_expected_topics)}</ul></div></div>
+      </div>
+      <div class="card-cb p-3 mb-3">
+        <h6 class="fw-bold small">Mock Interview Plan</h6>
+        <ul class="small mb-0">${listItems(p.mock_interview_plan)}</ul>
+      </div>
+      <div class="card-cb p-4">
+        <h6 class="fw-bold mb-3">7-Day Preparation Strategy</h6>
+        ${(p.seven_day_strategy || []).map(d => `
+          <div class="d-flex gap-3 mb-2">
+            <div class="badge-cb-week">${esc(d.day)}</div>
+            <div class="small">${esc(d.focus)}</div>
+          </div>`).join('')}
+      </div>
+    `;
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const payload = Object.fromEntries(new FormData(form).entries());
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    resultBox.innerHTML = '<div class="card-cb p-5 text-center text-muted-custom"><div class="spinner-border text-primary mb-3"></div><div>Building your prep guide…</div></div>';
+
+    fetch('/api/ai/company-prep', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) { renderPrep(data.prep); }
+        else { resultBox.innerHTML = `<div class="alert alert-danger">${esc(data.error)}</div>`; }
+      })
+      .catch(() => { resultBox.innerHTML = '<div class="alert alert-danger">Something went wrong. Please try again.</div>'; })
+      .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="bi bi-magic"></i> Prep';
+      });
+  });
+});
+</script>
+<style>
+.badge-cb-week {
+  flex-shrink: 0; min-width: 74px; height: 32px; border-radius: 999px;
+  background: var(--surface-alt); color: var(--primary); font-weight: 700; font-size: 0.75rem;
+  display: flex; align-items: center; justify-content: center; padding: 0 0.75rem;
+}
+</style>
+{% endblock %}

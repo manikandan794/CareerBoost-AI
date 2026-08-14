@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Companies — CareerBoost AI{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 animate-fade-up">
+    <div>
+      <h3 class="fw-bold">Hiring Companies</h3>
+      <p class="text-muted-custom mb-0">Explore roles, packages, and eligibility criteria.</p>
+    </div>
+    <form method="GET" class="d-flex" style="max-width: 320px;">
+      <input type="text" name="q" value="{{ search }}" class="form-control form-control-cb" placeholder="Search company or industry...">
+    </form>
+  </div>
+
+  <div class="row g-4">
+    {% for c in companies %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card-cb p-4 h-100 animate-fade-up">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="company-icon"><i class="bi {{ c.logo_icon }}"></i></div>
+          <div>
+            <h5 class="fw-bold mb-0">{{ c.name }}</h5>
+            <small class="text-muted-custom">{{ c.industry }}</small>
+          </div>
+        </div>
+        <p class="mb-1"><i class="bi bi-briefcase text-primary-custom me-1"></i> {{ c.role }}</p>
+        <p class="mb-1"><i class="bi bi-cash-coin text-primary-custom me-1"></i> {{ c.package }}</p>
+        <p class="mb-1"><i class="bi bi-geo-alt text-primary-custom me-1"></i> {{ c.location }}</p>
+        <hr>
+        <p class="small text-muted-custom mb-0"><strong>Eligibility:</strong> {{ c.eligibility }}</p>
+      </div>
+    </div>
+    {% else %}
+    <p class="text-muted-custom">No companies match your search.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
