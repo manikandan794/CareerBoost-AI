@@ -37,7 +37,7 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 GEMINI_API_URL_TMPL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 REQUEST_TIMEOUT_SECONDS = 45
 
@@ -148,7 +148,6 @@ def generate(system_instruction, user_prompt, history=None, temperature=0.7, max
     payload = {
         "contents": contents,
         "generationConfig": {
-            "temperature": temperature,
             "maxOutputTokens": max_tokens,
         },
         "safetySettings": _SAFETY_SETTINGS,
