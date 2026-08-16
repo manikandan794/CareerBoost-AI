@@ -129,7 +129,7 @@ def _post(payload):
     return GeminiResult(True, text=text)
 
 
-def generate(system_instruction, user_prompt, history=None, temperature=0.7, max_tokens=1024):
+def generate(system_instruction, user_prompt, history=None, temperature=0.7, max_tokens=1024, response_mime_type=None):
     """
     Free-form conversational generation.
 
@@ -146,12 +146,16 @@ def generate(system_instruction, user_prompt, history=None, temperature=0.7, max
     contents.append({"role": "user", "parts": [{"text": user_prompt}]})
 
     payload = {
-        "contents": contents,
-        "generationConfig": {
-            "maxOutputTokens": max_tokens,
-        },
-        "safetySettings": _SAFETY_SETTINGS,
-    }
+    "contents": contents,
+    "generationConfig": {
+        "temperature": temperature,
+        "maxOutputTokens": max_tokens,
+    },
+    "safetySettings": _SAFETY_SETTINGS,
+}
+
+    if response_mime_type:
+         payload["generationConfig"]["responseMimeType"] = response_mime_type
     if system_instruction:
         payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
 
@@ -176,7 +180,13 @@ def generate_json(system_instruction, user_prompt, temperature=0.5, max_tokens=2
         + "\n\nRespond with ONLY valid JSON. No markdown code fences, no commentary, "
           "no leading or trailing text — the entire response must be parseable by json.loads()."
     )
-    result = generate(strict_instruction, user_prompt, temperature=temperature, max_tokens=max_tokens)
+    result = generate(
+    strict_instruction,
+    user_prompt,
+    temperature=temperature,
+    max_tokens=max_tokens,
+    response_mime_type="application/json",
+    )
     if not result.ok:
         return result
 
